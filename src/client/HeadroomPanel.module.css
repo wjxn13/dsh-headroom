@@ -1,0 +1,86 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card {
+  border: 1px solid var(--dsw-color-border-strong, #d0d7de);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.label {
+  font-size: 13px;
+  color: var(--dsw-color-text-secondary, #57606a);
+}
+
+.value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dsw-color-text-primary, #1f2328);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badgeHealthy {
+  background: var(--dsw-color-success-bg, #dafbe1);
+  color: var(--dsw-color-success-fg, #1a7f37);
+}
+
+.badgeDown {
+  background: var(--dsw-color-danger-bg, #ffebe9);
+  color: var(--dsw-color-danger-fg, #cf222e);
+}
+
+.badgeProbing {
+  background: var(--dsw-color-neutral-bg, #f6f8fa);
+  color: var(--dsw-color-text-secondary, #57606a);
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.warning {
+  font-size: 12px;
+  color: var(--dsw-color-danger-fg, #cf222e);
+  background: var(--dsw-color-danger-bg, #ffebe9);
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.notes {
+  font-size: 12px;
+  color: var(--dsw-color-text-secondary, #57606a);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 16px;
+}
+
+.notesTitle {
+  font-weight: 600;
+  color: var(--dsw-color-text-primary, #1f2328);
+  margin-bottom: 4px;
+}

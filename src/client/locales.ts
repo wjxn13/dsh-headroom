@@ -1,0 +1,56 @@
+/**
+ * dsh-headroom copy dictionaries (zh + en). The panel is a settings page, so
+ * its strings live in one namespace owned by this plugin.
+ */
+
+export const zh = {
+  'nav': '线路切换',
+  'title': 'Headroom 压缩线路',
+  'description': '在直连与 Headroom 压缩代理之间一键切换。切换热生效，下一次请求即走新线路。',
+  'current': '当前线路',
+  'routeDirect': '直连（api.deepseek.com）',
+  'routeHeadroom': '压缩（Headroom :8787）',
+  'routeUnknown': '未知（baseURL 未识别）',
+  'headroomStatus': 'Headroom 状态',
+  'headroomHealthy': '健康（v{version}）',
+  'headroomDown': '不可达',
+  'headroomProbing': '探测中…',
+  'switchToHeadroom': '切换到压缩线路',
+  'switchToDirect': '切回直连',
+  'switching': '切换中…',
+  'switched': '已切换',
+  'error': '操作失败：{message}',
+  'headroomDownWarning': 'Headroom 当前不可达。切换后请求会失败，DSH 会自动重试；请先启动 Headroom。',
+  'notes': '说明',
+  'noteSource': '压缩引擎为 Headroom（headroomlabs-ai/headroom，Apache 2.0），本插件仅负责集成与管理。',
+  'noteCache': 'Headroom 的改写是确定性的，前缀缓存命中率不受影响（实测 97.6%+）。',
+  'noteQuality': '压缩只作用于工具描述等非关键内容，对话与工具结果不受影响。',
+  'noteFallback': '线路故障时可在此页一键切回直连，无需重启。',
+} as const
+
+export const en = {
+  'nav': 'Route Switch',
+  'title': 'Headroom Compression Route',
+  'description': 'Toggle between direct DeepSeek and the Headroom compression proxy with one click. The change applies to the next request.',
+  'current': 'Current route',
+  'routeDirect': 'Direct (api.deepseek.com)',
+  'routeHeadroom': 'Compressed (Headroom :8787)',
+  'routeUnknown': 'Unknown baseURL',
+  'headroomStatus': 'Headroom status',
+  'headroomHealthy': 'Healthy (v{version})',
+  'headroomDown': 'Unreachable',
+  'headroomProbing': 'Probing…',
+  'switchToHeadroom': 'Switch to compressed',
+  'switchToDirect': 'Switch to direct',
+  'switching': 'Switching…',
+  'switched': 'Switched',
+  'error': 'Operation failed: {message}',
+  'headroomDownWarning': 'Headroom is unreachable. Requests will fail and DSH will retry; start Headroom first.',
+  'notes': 'Notes',
+  'noteSource': 'Compression engine: Headroom (headroomlabs-ai/headroom, Apache-2.0). This plugin only integrates and manages it.',
+  'noteCache': 'Headroom rewrites are deterministic; prefix cache hit rate is unaffected (measured 97.6%+).',
+  'noteQuality': 'Compression only touches tool descriptions, never conversation or tool results.',
+  'noteFallback': 'If the route fails, switch back here with one click. No restart needed.',
+} as const
+
+export type HeadroomPanelKey = keyof typeof zh

@@ -1,0 +1,58 @@
+{
+  "name": "@dsh-external/dsh-headroom",
+  "version": "0.1.0",
+  "description": "Headroom context-compression proxy integration for DeepSeek Harness: detect/install/start Headroom, auto-configure the DeepSeek compressed route, one-click route switching UI. Built on headroomlabs-ai/headroom (Apache-2.0).",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/types/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-api-remotes"
+      ],
+      "platform": "web"
+    }
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:host": "node scripts/build.mjs --host",
+    "build:client": "node scripts/build.mjs --client"
+  },
+  "files": [
+    "lib",
+    "src",
+    "scripts",
+    "README.md",
+    "NOTICE",
+    "LICENSE"
+  ],
+  "license": "Apache-2.0",
+  "author": "wjxn13",
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "headroom",
+    "context-compression",
+    "token-saving"
+  ],
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "@types/react": "^18.3.31",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2"
+  }
+}

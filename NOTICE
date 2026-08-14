@@ -1,0 +1,25 @@
+dsh-headroom — Headroom integration plugin for DeepSeek Harness
+================================================================
+
+This plugin integrates the Headroom context-compression proxy into DeepSeek
+Harness. The compression engine and proxy are NOT authored by this plugin.
+
+Third-party notices
+-------------------
+
+1. Headroom (headroomlabs-ai/headroom)
+   - Project: https://github.com/headroomlabs-ai/headroom
+   - PyPI:    https://pypi.org/project/headroom-ai/
+   - License: Apache License 2.0
+   - This plugin detects, installs, configures, and manages the Headroom proxy
+     process; it does not modify Headroom's compression algorithms. Headroom's
+     copyright and license are retained in full.
+
+2. DeepSeek Harness (deepseek-ai/deepseek-harness)
+   - Project: https://github.com/deepseek-ai/deepseek-harness
+   - This plugin is a third-party extension for the DeepSeek Harness plugin
+     system and is not an official DeepSeek project.
+
+License
+-------
+This plugin is distributed under the Apache License 2.0. See LICENSE.
