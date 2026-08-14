@@ -110,7 +110,9 @@ async function buildClient() {
     ],
     sourcemap: true,
     banner: {
-      js: `window.__ModuleLoader__.load({ id: ${JSON.stringify(pkgName)}, factory: (require) => {`,
+      js: `window.__ModuleLoader__.load({ id: ${JSON.stringify(pkgName)}, factory: (require) => {
+  var module = { exports: {} };
+  var exports = module.exports;`,
     },
     footer: {
       js: 'return module.exports; } });',
