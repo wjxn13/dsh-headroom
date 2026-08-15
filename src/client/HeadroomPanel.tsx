@@ -245,6 +245,22 @@ export function HeadroomPanel(props: HeadroomPanelProps): ReactNode {
                 {t('statSavedMoney')}
               </span>
             </div>
+            <div className={styles['moneyRow']}>
+              <span className={styles['statValue']}>
+                {formatCny(estimateSpend(stats.lifetimeInputTokens, 0, stats.cacheHitRate / 100, pricesForModel(priceTable, modelId), isPeakHour(priceTable?.window)))}
+              </span>
+              <span className={styles['statLabel']}>
+                {t('statLifetimeMoney')}
+              </span>
+            </div>
+            <div className={styles['moneyRow']}>
+              <span className={styles['statValue']}>
+                {formatCny(estimateSpend(stats.tokensSaved, 0, stats.cacheHitRate / 100, pricesForModel(priceTable, modelId), isPeakHour(priceTable?.window)))}
+              </span>
+              <span className={styles['statLabel']}>
+                {t('statLifetimeSavedMoney')}
+              </span>
+            </div>
             </>
           )
           : <span className={styles['statsNote']}>{t('statsNoPrice')}</span>}
