@@ -92,12 +92,20 @@ export interface ModelPrices {
   outputOffPeak?: number
 }
 
-/** User-configurable peak window: local hours (inclusive start, exclusive end). */
-export interface PeakWindow {
-  /** Peak start hour (0-23). */
+/** One peak span: local hours (inclusive start, exclusive end). */
+export interface PeakSpan {
   startHour: number
-  /** Peak end hour (0-24; exclusive). */
   endHour: number
+}
+
+/**
+ * User-configurable peak windows. DeepSeek's official peak is TWO spans
+ * (Beijing 09:00-12:00 and 14:00-18:00), so a single start/end would wrongly
+ * mark the 12:00-14:00 gap as peak and overestimate spend. The UI edits the
+ * span list; an empty list means "no peak" (all hours off-peak).
+ */
+export interface PeakWindow {
+  spans: PeakSpan[]
 }
 
 /**
@@ -127,7 +135,7 @@ export const DEEPSEEK_OFFICIAL_PRICES: Record<string, ModelPrices> = {
 /** Default price table: official prices with the official peak window. */
 export const DEFAULT_PRICE_TABLE: PriceTable = {
   models: DEEPSEEK_OFFICIAL_PRICES,
-  window: { startHour: 9, endHour: 18 }, // covers 9-12 and 14-18 via two spans below
+  window: { spans: [{ startHour: 9, endHour: 12 }, { startHour: 14, endHour: 18 }] }, // official Beijing peak
 }
 
 /** Whether any money-relevant price is configured. */
@@ -146,16 +154,20 @@ export function hasPriceTable(table: PriceTable | undefined): table is PriceTabl
  * start/end, and the UI offers the official two-span preset as the default.
  */
 export function isPeakHour(window: PeakWindow | undefined, now: Date = new Date()): boolean {
-  if (window === undefined) {
+  const spans = window?.spans
+  if (spans === undefined || spans.length === 0) {
+    // Fall back to the official two-span window when unconfigured.
     const hour = now.getHours()
     return (hour >= 9 && hour < 12) || (hour >= 14 && hour < 18)
   }
-  const { startHour, endHour } = window
   const hour = now.getHours()
-  if (startHour === endHour) return false
-  if (startHour < endHour) return hour >= startHour && hour < endHour
-  // Wraps midnight (e.g. 22:00 - 06:00).
-  return hour >= startHour || hour < endHour
+  return spans.some((span) => {
+    const { startHour, endHour } = span
+    if (startHour === endHour) return false
+    if (startHour < endHour) return hour >= startHour && hour < endHour
+    // Wraps midnight (e.g. 22:00 - 06:00).
+    return hour >= startHour || hour < endHour
+  })
 }
 
 /** A price lookup that falls back peak<->off-peak and then to a default. */

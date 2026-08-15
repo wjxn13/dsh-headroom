@@ -358,8 +358,49 @@ export function HeadroomPanel(props: HeadroomPanelProps): ReactNode {
               </div>
               <div className={styles['priceWindow']}>
                 <span className={styles['statLabel']}>{t('priceWindow')}</span>
-                <PriceField label={t('priceWindowStart')} value={priceTable.window?.startHour} onChange={(v) => { void priceScope?.set('priceTable', { ...priceTable, window: { ...priceTable.window, startHour: v } }) }} />
-                <PriceField label={t('priceWindowEnd')} value={priceTable.window?.endHour} onChange={(v) => { void priceScope?.set('priceTable', { ...priceTable, window: { ...priceTable.window, endHour: v } }) }} />
+                {(priceTable.window?.spans ?? []).map((span, idx) => (
+                  <div key={idx} className={styles['priceSpanRow']}>
+                    <PriceField
+                      label={`${t('priceWindowStart')} #${idx + 1}`}
+                      value={span.startHour}
+                      onChange={(v) => {
+                        const spans = [...(priceTable.window?.spans ?? [])]
+                        spans[idx] = { ...spans[idx], startHour: v ?? 0 }
+                        void priceScope?.set('priceTable', { ...priceTable, window: { spans } })
+                      }}
+                    />
+                    <PriceField
+                      label={`${t('priceWindowEnd')} #${idx + 1}`}
+                      value={span.endHour}
+                      onChange={(v) => {
+                        const spans = [...(priceTable.window?.spans ?? [])]
+                        spans[idx] = { ...spans[idx], endHour: v ?? 0 }
+                        void priceScope?.set('priceTable', { ...priceTable, window: { spans } })
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="dsw-button"
+                      disabled={(priceTable.window?.spans ?? []).length <= 1}
+                      onClick={() => {
+                        const spans = (priceTable.window?.spans ?? []).filter((_s, i) => i !== idx)
+                        void priceScope?.set('priceTable', { ...priceTable, window: { spans } })
+                      }}
+                    >
+                      {t('priceSpanRemove')}
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  className="dsw-button"
+                  onClick={() => {
+                    const spans = [...(priceTable.window?.spans ?? []), { startHour: 0, endHour: 0 }]
+                    void priceScope?.set('priceTable', { ...priceTable, window: { spans } })
+                  }}
+                >
+                  {t('priceSpanAdd')}
+                </button>
               </div>
             </div>
           )

@@ -193,3 +193,14 @@
   border-top: 1px solid var(--dsw-color-border-strong, #d0d7de);
   padding-top: 8px;
 }
+
+.priceSpanRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  width: 100%;
+}
+
+.priceSpanRow > label {
+  flex: 1;
+}
