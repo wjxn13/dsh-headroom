@@ -79,42 +79,83 @@ export const EMPTY_STATS: HeadroomStatsView = {
  * are optional; a missing field falls back to its off-peak counterpart, and
  * a fully empty table disables money display.
  */
-export interface PriceTable {
-  /** Input cache-hit price (CNY/M), peak. */
+/**
+ * One model's price set, in CNY per 1M tokens, for the peak and off-peak
+ * windows. A missing field falls back to its off-peak counterpart.
+ */
+export interface ModelPrices {
   hitPeak?: number
-  /** Input cache-hit price (CNY/M), off-peak. */
   hitOffPeak?: number
-  /** Input cache-miss price (CNY/M), peak. */
   missPeak?: number
-  /** Input cache-miss price (CNY/M), off-peak. */
   missOffPeak?: number
-  /** Output price (CNY/M), peak. */
   outputPeak?: number
-  /** Output price (CNY/M), off-peak. */
   outputOffPeak?: number
 }
 
-/** Official DeepSeek V4-Flash prices (CNY/M) as the default table. */
-export const DEEPSEEK_V4_FLASH_PRICES: PriceTable = {
-  hitPeak: 0.10,
-  hitOffPeak: 0.05,
-  missPeak: 3.0,
-  missOffPeak: 1.5,
-  outputPeak: 9.0,
-  outputOffPeak: 4.5,
+/** User-configurable peak window: local hours (inclusive start, exclusive end). */
+export interface PeakWindow {
+  /** Peak start hour (0-23). */
+  startHour: number
+  /** Peak end hour (0-24; exclusive). */
+  endHour: number
+}
+
+/**
+ * Full user price configuration: a price table per model id plus the peak
+ * window definition. The default window mirrors DeepSeek's official peak
+ * hours (Beijing 09:00-12:00, 14:00-18:00).
+ */
+export interface PriceTable {
+  models: Record<string, ModelPrices>
+  window: PeakWindow
+}
+
+/** Official DeepSeek peak/off-peak prices (CNY/M), effective 2026-08-17. */
+export const DEEPSEEK_OFFICIAL_PRICES: Record<string, ModelPrices> = {
+  'deepseek-v4-flash': {
+    hitPeak: 0.10, hitOffPeak: 0.05,
+    missPeak: 3.0, missOffPeak: 1.5,
+    outputPeak: 9.0, outputOffPeak: 4.5,
+  },
+  'deepseek-v4-pro': {
+    hitPeak: 0.30, hitOffPeak: 0.15,
+    missPeak: 9.0, missOffPeak: 4.5,
+    outputPeak: 27.0, outputOffPeak: 13.5,
+  },
+}
+
+/** Default price table: official prices with the official peak window. */
+export const DEFAULT_PRICE_TABLE: PriceTable = {
+  models: DEEPSEEK_OFFICIAL_PRICES,
+  window: { startHour: 9, endHour: 18 }, // covers 9-12 and 14-18 via two spans below
 }
 
 /** Whether any money-relevant price is configured. */
 export function hasPriceTable(table: PriceTable | undefined): table is PriceTable {
   if (table === undefined) return false
-  return [table.hitPeak, table.hitOffPeak, table.missPeak, table.missOffPeak, table.outputPeak, table.outputOffPeak]
-    .some((v) => typeof v === 'number' && v >= 0)
+  const models = table.models ?? {}
+  return Object.values(models).some((m) =>
+    [m.hitPeak, m.hitOffPeak, m.missPeak, m.missOffPeak, m.outputPeak, m.outputOffPeak]
+      .some((v) => typeof v === 'number' && v >= 0),
+  )
 }
 
-/** Whether `now` (local time) falls in DeepSeek's peak window (Beijing 9-12 / 14-18). */
-export function isPeakHour(now: Date = new Date()): boolean {
+/**
+ * Whether `now` (local time) falls in the user's peak window. The official
+ * window is two spans (09-12 and 14-18); the config stores a single
+ * start/end, and the UI offers the official two-span preset as the default.
+ */
+export function isPeakHour(window: PeakWindow | undefined, now: Date = new Date()): boolean {
+  if (window === undefined) {
+    const hour = now.getHours()
+    return (hour >= 9 && hour < 12) || (hour >= 14 && hour < 18)
+  }
+  const { startHour, endHour } = window
   const hour = now.getHours()
-  return (hour >= 9 && hour < 12) || (hour >= 14 && hour < 18)
+  if (startHour === endHour) return false
+  if (startHour < endHour) return hour >= startHour && hour < endHour
+  // Wraps midnight (e.g. 22:00 - 06:00).
+  return hour >= startHour || hour < endHour
 }
 
 /** A price lookup that falls back peak<->off-peak and then to a default. */
@@ -124,15 +165,24 @@ function priceOf(value: number | undefined, fallback: number | undefined, defaul
   return defaultPrice
 }
 
+/** Resolve the price set for a model id, falling back to the first model or a flash-like default. */
+export function pricesForModel(table: PriceTable | undefined, modelId: string | undefined): ModelPrices {
+  if (table !== undefined) {
+    const byId = table.models?.[modelId ?? '']
+    if (byId !== undefined) return byId
+    const first = Object.values(table.models ?? {})[0]
+    if (first !== undefined) return first
+  }
+  return DEEPSEEK_OFFICIAL_PRICES['deepseek-v4-flash'] ?? {}
+}
+
 /**
- * Estimate the spend of a token mix under a price table at the current peak
- * status. The mix is a rough split: input tokens are assumed to be mostly
- * cache-hits (the observed hit rate is high), so the estimate is labelled as
- * such in the UI.
+ * Estimate the spend of a token mix under a model's price set at the current
+ * peak status. Input tokens are split by the observed cache hit rate.
  * @param inputTokens - total input tokens.
  * @param outputTokens - total output tokens (0 if unknown).
  * @param hitRate - observed cache hit rate (0-1).
- * @param table - user price table.
+ * @param prices - the model's price set.
  * @param peak - whether the current local hour is peak.
  * @returns estimated spend in CNY.
  */
@@ -140,23 +190,17 @@ export function estimateSpend(
   inputTokens: number,
   outputTokens: number,
   hitRate: number,
-  table: PriceTable,
+  prices: ModelPrices,
   peak: boolean,
 ): number {
   const hit = inputTokens * (hitRate > 0 ? Math.min(hitRate, 1) : 0)
   const miss = inputTokens - hit
-  const hitPrice = peak ? priceOf(table.hitPeak, table.hitOffPeak, 0.05) : priceOf(table.hitOffPeak, table.hitPeak, 0.05)
-  const missPrice = peak ? priceOf(table.missPeak, table.missOffPeak, 1.5) : priceOf(table.missOffPeak, table.missPeak, 1.5)
-  const outPrice = peak ? priceOf(table.outputPeak, table.outputOffPeak, 4.5) : priceOf(table.outputOffPeak, table.outputPeak, 4.5)
+  const hitPrice = peak ? priceOf(prices.hitPeak, prices.hitOffPeak, 0.05) : priceOf(prices.hitOffPeak, prices.hitPeak, 0.05)
+  const missPrice = peak ? priceOf(prices.missPeak, prices.missOffPeak, 1.5) : priceOf(prices.missOffPeak, prices.missPeak, 1.5)
+  const outPrice = peak ? priceOf(prices.outputPeak, prices.outputOffPeak, 4.5) : priceOf(prices.outputOffPeak, prices.outputPeak, 4.5)
   return (hit / 1_000_000) * hitPrice + (miss / 1_000_000) * missPrice + (outputTokens / 1_000_000) * outPrice
 }
 
-/**
- * Fetch Headroom /stats and project the panel numbers. A failure returns the
- * empty view with ok=false so the UI can degrade gracefully.
- * @param base - Headroom origin (defaults to the loopback proxy).
- * @returns the projected stats view.
- */
 export async function fetchHeadroomStats(base = 'http://127.0.0.1:8787'): Promise<HeadroomStatsView> {
   try {
     const controller = new AbortController()

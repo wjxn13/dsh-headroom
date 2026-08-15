@@ -164,3 +164,32 @@
   width: 100%;
   box-sizing: border-box;
 }
+
+.priceSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.priceModelSelect {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.priceModelActive {
+  border-color: var(--dsw-color-accent-fg, #0969da) !important;
+  color: var(--dsw-color-accent-fg, #0969da) !important;
+  font-weight: 600;
+}
+
+.priceWindow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--dsw-color-border-strong, #d0d7de);
+  padding-top: 8px;
+}

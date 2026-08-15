@@ -54,6 +54,11 @@ export const zh = {
   'priceMissOff': '缓存未命中·空闲',
   'priceOutPeak': '输出·高峰',
   'priceOutOff': '输出·空闲',
+  'priceModel': '选择模型',
+  'priceNoModels': '未配置任何模型价格',
+  'priceWindow': '高峰时段（本地小时）',
+  'priceWindowStart': '开始小时 (0-23)',
+  'priceWindowEnd': '结束小时 (1-24)',
   'peak': '高峰',
   'offPeak': '空闲',
 } as const
@@ -109,6 +114,11 @@ export const en = {
   'priceMissOff': 'Cache miss · off-peak',
   'priceOutPeak': 'Output · peak',
   'priceOutOff': 'Output · off-peak',
+  'priceModel': 'Model',
+  'priceNoModels': 'No model prices configured',
+  'priceWindow': 'Peak window (local hours)',
+  'priceWindowStart': 'Start hour (0-23)',
+  'priceWindowEnd': 'End hour (1-24)',
   'peak': 'peak',
   'offPeak': 'off-peak',
 } as const

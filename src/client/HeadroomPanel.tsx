@@ -20,7 +20,7 @@ import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-web-react'
 import { DIRECT_BASE_URL, HEADROOM_BASE_URL, HEADROOM_LIVEZ_URL } from '../constants.ts'
 import {
   EMPTY_STATS, fetchHeadroomStats, formatTokens, formatUsd, formatCny,
-  hasPriceTable, isPeakHour, estimateSpend, DEEPSEEK_V4_FLASH_PRICES,
+  hasPriceTable, isPeakHour, estimateSpend, pricesForModel, DEFAULT_PRICE_TABLE,
 } from './stats.ts'
 import type { HeadroomStatsView, PriceTable } from './stats.ts'
 import type { en } from './locales.ts'
@@ -137,6 +137,7 @@ export function HeadroomPanel(props: HeadroomPanelProps): ReactNode {
   const [opBusy, setOpBusy] = useState<string | null>(null)
   const [opResult, setOpResult] = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
   const [stats, setStats] = useState<HeadroomStatsView>(EMPTY_STATS)
+  const [modelId, setModelId] = useState<string>('deepseek-v4-flash')
 
   useEffect(() => {
     if (route !== 'headroom' || probe.kind !== 'idle') return
@@ -229,10 +230,10 @@ export function HeadroomPanel(props: HeadroomPanelProps): ReactNode {
           ? (
             <div className={styles['moneyRow']}>
               <span className={styles['statValue']}>
-                {formatCny(estimateSpend(stats.inputTokens, 0, stats.cacheHitRate / 100, priceTable, isPeakHour()))}
+                {formatCny(estimateSpend(stats.inputTokens, 0, stats.cacheHitRate / 100, pricesForModel(priceTable, modelId), isPeakHour(priceTable?.window)))}
               </span>
               <span className={styles['statLabel']}>
-                {t('stat60minMoney')}{isPeakHour() ? `（${t('peak')}）` : `（${t('offPeak')}）`}
+                {t('stat60minMoney')}{isPeakHour(priceTable?.window) ? `（${t('peak')}）` : `（${t('offPeak')}）`}
               </span>
             </div>
           )
@@ -323,7 +324,7 @@ export function HeadroomPanel(props: HeadroomPanelProps): ReactNode {
             className="dsw-button"
             onClick={() => {
               if (hasPriceTable(priceTable)) { void priceScope?.unset('priceTable') }
-              else { void priceScope?.set('priceTable', DEEPSEEK_V4_FLASH_PRICES) }
+              else { void priceScope?.set('priceTable', DEFAULT_PRICE_TABLE) }
             }}
           >
             {hasPriceTable(priceTable) ? t('priceDisable') : t('priceEnable')}
@@ -331,13 +332,35 @@ export function HeadroomPanel(props: HeadroomPanelProps): ReactNode {
         </div>
         {hasPriceTable(priceTable)
           ? (
-            <div className={styles['priceGrid']}>
-              <PriceField label={t('priceHitPeak')} value={priceTable.hitPeak} onChange={(v) => { void priceScope?.set('priceTable', { ...priceTable, hitPeak: v }) }} />
-              <PriceField label={t('priceHitOff')} value={priceTable.hitOffPeak} onChange={(v) => { void priceScope?.set('priceTable', { ...priceTable, hitOffPeak: v }) }} />
-              <PriceField label={t('priceMissPeak')} value={priceTable.missPeak} onChange={(v) => { void priceScope?.set('priceTable', { ...priceTable, missPeak: v }) }} />
-              <PriceField label={t('priceMissOff')} value={priceTable.missOffPeak} onChange={(v) => { void priceScope?.set('priceTable', { ...priceTable, missOffPeak: v }) }} />
-              <PriceField label={t('priceOutPeak')} value={priceTable.outputPeak} onChange={(v) => { void priceScope?.set('priceTable', { ...priceTable, outputPeak: v }) }} />
-              <PriceField label={t('priceOutOff')} value={priceTable.outputOffPeak} onChange={(v) => { void priceScope?.set('priceTable', { ...priceTable, outputOffPeak: v }) }} />
+            <div className={styles['priceSection']}>
+              <div className={styles['priceModelSelect']}>
+                <span className={styles['statLabel']}>{t('priceModel')}</span>
+                {Object.keys(priceTable.models ?? {}).length === 0
+                  ? <span className={styles['statsWarn']}>{t('priceNoModels')}</span>
+                  : Object.keys(priceTable.models ?? {}).map((id) => (
+                    <button
+                      key={id}
+                      type="button"
+                      className={`dsw-button ${modelId === id ? styles['priceModelActive'] : ''}`}
+                      onClick={() => { setModelId(id) }}
+                    >
+                      {id}
+                    </button>
+                  ))}
+              </div>
+              <div className={styles['priceGrid']}>
+                <PriceField label={t('priceHitPeak')} value={priceTable.models?.[modelId]?.hitPeak} onChange={(v) => { void priceScope?.set('priceTable', { ...priceTable, models: { ...priceTable.models, [modelId]: { ...priceTable.models?.[modelId], hitPeak: v } } }) }} />
+                <PriceField label={t('priceHitOff')} value={priceTable.models?.[modelId]?.hitOffPeak} onChange={(v) => { void priceScope?.set('priceTable', { ...priceTable, models: { ...priceTable.models, [modelId]: { ...priceTable.models?.[modelId], hitOffPeak: v } } }) }} />
+                <PriceField label={t('priceMissPeak')} value={priceTable.models?.[modelId]?.missPeak} onChange={(v) => { void priceScope?.set('priceTable', { ...priceTable, models: { ...priceTable.models, [modelId]: { ...priceTable.models?.[modelId], missPeak: v } } }) }} />
+                <PriceField label={t('priceMissOff')} value={priceTable.models?.[modelId]?.missOffPeak} onChange={(v) => { void priceScope?.set('priceTable', { ...priceTable, models: { ...priceTable.models, [modelId]: { ...priceTable.models?.[modelId], missOffPeak: v } } }) }} />
+                <PriceField label={t('priceOutPeak')} value={priceTable.models?.[modelId]?.outputPeak} onChange={(v) => { void priceScope?.set('priceTable', { ...priceTable, models: { ...priceTable.models, [modelId]: { ...priceTable.models?.[modelId], outputPeak: v } } }) }} />
+                <PriceField label={t('priceOutOff')} value={priceTable.models?.[modelId]?.outputOffPeak} onChange={(v) => { void priceScope?.set('priceTable', { ...priceTable, models: { ...priceTable.models, [modelId]: { ...priceTable.models?.[modelId], outputOffPeak: v } } }) }} />
+              </div>
+              <div className={styles['priceWindow']}>
+                <span className={styles['statLabel']}>{t('priceWindow')}</span>
+                <PriceField label={t('priceWindowStart')} value={priceTable.window?.startHour} onChange={(v) => { void priceScope?.set('priceTable', { ...priceTable, window: { ...priceTable.window, startHour: v } }) }} />
+                <PriceField label={t('priceWindowEnd')} value={priceTable.window?.endHour} onChange={(v) => { void priceScope?.set('priceTable', { ...priceTable, window: { ...priceTable.window, endHour: v } }) }} />
+              </div>
             </div>
           )
           : <span className={styles['statsNote']}>{t('priceHint')}</span>}
