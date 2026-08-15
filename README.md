@@ -18,13 +18,14 @@ DeepSeek Harness 的 Headroom 上下文压缩代理集成插件：一键检测�
 - **兼容预设**：固化 Windows workaround（`HEADROOM_DETECT_BACKEND=python`、
   `HEADROOM_TOOL_SEARCH=off`）与 DeepSeek 双协议路由
 - **一键切回直连**：任何时刻可切回 `api.deepseek.com`，无锁死风险
+- **实时统计**：设置页显示花费/节省 token、缓存命中率（每 10 秒刷新）
 
 ## 安装
 
 ### 前置条件
 
 - DeepSeek Harness（`dsh`）已安装并运行
-- Python 3.10+（Windows 建议 3.11/3.12/3.13，见 [Windows 注意](#windows-注意)）
+- Python 3.10+（Windows 3.10-3.13 均可，Headroom ≥0.35 提供预编译 wheel，无需编译工具链）
 
 ### 安装插件
 
@@ -55,16 +56,15 @@ dsh plugin add file:../dsh-headroom  # 或本地路径
 2. **启动**：点「启动压缩线路」（自动拉起代理并写入 baseURL）
 3. **切换**：随时点「切回直连」恢复默认线路
 
-## Windows 注意
+> ⏳ **注意**：启动压缩线路后，**首次对话可能需要等待约 1 分钟**——这是 Headroom
+> 冷启动（首次加载 tokenizer / 模型组件），之后请求恢复正常（几秒内）。
 
-Headroom 官方尚未发布 Windows 预编译 wheel（见
-[headroom#636](https://github.com/headroomlabs-ai/headroom/issues/636)），
-`pip install` 时 Rust 扩展需从源码构建，需要：
+## Windows
 
-- **Visual Studio Build Tools**（含 "Desktop development with C++"，提供 `link.exe`）
-- **Rust**（`rustup`，`stable-x86_64-pc-windows-msvc` 工具链）
+Headroom **0.35.0 起提供 Windows 预编译 wheel**（`headroom_ai-*-win_amd64.whl`，
+Python 3.10+，见 [headroom#636](https://github.com/headroomlabs-ai/headroom/issues/636)），
+`pip install headroom-ai[proxy]` 在 Windows 上直接安装，**无需 Rust 或 MSVC 工具链**。
 
-若你的机器已有可用的 Python 环境（本插件会优先复用），可跳过构建。
 详细的 Headroom 安装说明见[官方文档](https://github.com/headroomlabs-ai/headroom/blob/main/docs/content/docs/installation.mdx)。
 
 ## 兼容性
