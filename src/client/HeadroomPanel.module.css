@@ -133,3 +133,34 @@
   color: var(--dsw-color-text-primary, #1f2328);
   margin-bottom: 4px;
 }
+
+.moneyRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.priceGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.priceField {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.input {
+  font-size: 13px;
+  padding: 4px 8px;
+  border: 1px solid var(--dsw-color-border-strong, #d0d7de);
+  border-radius: 6px;
+  background: var(--dsw-color-canvas, #ffffff);
+  color: var(--dsw-color-text-primary, #1f2328);
+  width: 100%;
+  box-sizing: border-box;
+}

@@ -47,6 +47,10 @@ export function apply(ctx: ClientContext): void {
 
   const scope = ctx.settingsScope.bind<DeepSeekRouteSettings>({ namespace: LLM_DEEPSEEK_NAMESPACE })
   const useSnapshot = bindSnapshotSelector(scope)
+  // Price-table configuration lives in this plugin's own namespace so users can
+  // set peak/off-peak CNY prices without touching the provider settings.
+  const priceScope = ctx.settingsScope.bind<{ price?: import('./stats.ts').PriceTable }>({ namespace: 'dsh-headroom' })
+  const usePriceSnapshot = bindSnapshotSelector(priceScope)
   const t = ctx.locale.bind(NS) as HeadroomPanelInjected['t']
   // Host command channel: execute('/headroom start') etc. via the commands remote.
   const remote = ctx.get('remote') as { command?: { execute: (agentId: unknown, line: string) => Promise<unknown> } } | undefined
@@ -54,6 +58,8 @@ export function apply(ctx: ClientContext): void {
   const injected = (): HeadroomPanelInjected => ({
     scope,
     useSnapshot,
+    priceScope,
+    usePriceSnapshot,
     t,
     runCommand: async (line: string) => {
       // Resolve the current agent session id for the command RPC; fall back to

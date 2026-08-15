@@ -18,8 +18,11 @@ import type { ReactNode } from 'react'
 import type { SettingsScope, SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
 import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-web-react'
 import { DIRECT_BASE_URL, HEADROOM_BASE_URL, HEADROOM_LIVEZ_URL } from '../constants.ts'
-import { EMPTY_STATS, fetchHeadroomStats, formatTokens, formatUsd } from './stats.ts'
-import type { HeadroomStatsView } from './stats.ts'
+import {
+  EMPTY_STATS, fetchHeadroomStats, formatTokens, formatUsd, formatCny,
+  hasPriceTable, isPeakHour, estimateSpend, DEEPSEEK_V4_FLASH_PRICES,
+} from './stats.ts'
+import type { HeadroomStatsView, PriceTable } from './stats.ts'
 import type { en } from './locales.ts'
 import styles from './HeadroomPanel.module.css'
 
@@ -35,6 +38,10 @@ export interface HeadroomPanelInjected {
   scope: SettingsScope<DeepSeekRouteSettings>
   /** uSES hook bound to the scope snapshot. */
   useSnapshot: SnapshotSelectorHook<SettingsScopeSnapshot<DeepSeekRouteSettings>>
+  /** Price-table configuration scope (this plugin's own namespace). */
+  priceScope: SettingsScope<{ price?: PriceTable }>
+  /** uSES hook bound to the price scope. */
+  usePriceSnapshot: SnapshotSelectorHook<SettingsScopeSnapshot<{ price?: PriceTable }>>
   /** Panel copy. */
   t: (key: keyof typeof en) => string
   /** Execute a host command (e.g. '/headroom start') and return its result. */
@@ -82,6 +89,32 @@ async function probeHeadroom(): Promise<Exclude<ProbeState, { kind: 'idle' | 'pr
 }
 
 /**
+ * A numeric price field (CNY per 1M tokens) with a blank-tolerant local state.
+ */
+function PriceField(props: { label: string; value: number | undefined; onChange: (v: number | undefined) => void }): ReactNode {
+  const [text, setText] = useState(props.value === undefined ? '' : String(props.value))
+  return (
+    <label className={styles['priceField']}>
+      <span className={styles['statLabel']}>{props.label}</span>
+      <input
+        className={styles['input']}
+        type="number"
+        min="0"
+        step="0.01"
+        value={text}
+        placeholder="—"
+        onChange={(e) => {
+          const raw = e.target.value
+          setText(raw)
+          const parsed = Number(raw)
+          props.onChange(raw === '' || Number.isNaN(parsed) ? undefined : parsed)
+        }}
+      />
+    </label>
+  )
+}
+
+/**
  * Render the Headroom control panel: current route, proxy health, route
  * toggle, and the safety notes. All writes go through the settings scope; the
  * panel re-renders from the next snapshot.
@@ -89,9 +122,11 @@ async function probeHeadroom(): Promise<Exclude<ProbeState, { kind: 'idle' | 'pr
  * @returns the panel content.
  */
 export function HeadroomPanel(props: HeadroomPanelProps): ReactNode {
-  const { scope, useSnapshot, t, runCommand } = props
+  const { scope, useSnapshot, priceScope, usePriceSnapshot, t, runCommand } = props
   if (scope === undefined || useSnapshot === undefined || t === undefined) return null
   const snapshot = useSnapshot((s) => s)
+  const priceSnapshot = usePriceSnapshot?.((s) => s)
+  const priceTable = priceSnapshot?.value?.price
   const baseURL = snapshot.value?.baseURL
   const writable = snapshot.writable === true
   const route = routeOf(baseURL)
@@ -165,26 +200,21 @@ export function HeadroomPanel(props: HeadroomPanelProps): ReactNode {
     <section className={styles['section']} aria-label={t('title')}>
       <div className={styles['statsCard']}>
         <div className={styles['statsTitle']}>{t('statsTitle')}</div>
+        {route === 'direct'
+          ? <div className={styles['statsWarn']}>{t('statsFrozenDirect')}</div>
+          : null}
         <div className={styles['statsGrid']}>
           <div className={styles['statCell']}>
             <span className={styles['statValue']}>{formatTokens(stats.inputTokens)}</span>
-            <span className={styles['statLabel']}>{t('statSpent')}</span>
+            <span className={styles['statLabel']}>{t('stat60min')}</span>
           </div>
           <div className={styles['statCell']}>
             <span className={styles['statValue']}>{formatTokens(stats.tokensSaved)}</span>
-            <span className={styles['statLabel']}>{t('statSaved')}</span>
+            <span className={styles['statLabel']}>{t('statSavedTotal')}</span>
           </div>
           <div className={styles['statCell']}>
-            <span className={styles['statValue']}>{formatUsd(stats.savingsUsd)}</span>
-            <span className={styles['statLabel']}>{t('statCompressionUsd')}</span>
-          </div>
-          <div className={styles['statCell']}>
-            <span className={styles['statValue']}>{formatUsd(stats.cacheDiscountUsd)}</span>
-            <span className={styles['statLabel']}>{t('statCacheDiscountUsd')}</span>
-          </div>
-          <div className={styles['statCell']}>
-            <span className={styles['statValue']}>{formatUsd(stats.costUsd)}</span>
-            <span className={styles['statLabel']}>{t('statCostUsd')}</span>
+            <span className={styles['statValue']}>{formatTokens(stats.lifetimeInputTokens)}</span>
+            <span className={styles['statLabel']}>{t('statLifetimeInput')}</span>
           </div>
           <div className={styles['statCell']}>
             <span className={styles['statValue']}>{stats.cacheHitRate > 0 ? `${stats.cacheHitRate.toFixed(1)}%` : '—'}</span>
@@ -195,6 +225,18 @@ export function HeadroomPanel(props: HeadroomPanelProps): ReactNode {
             <span className={styles['statLabel']}>{t('statRequests')}</span>
           </div>
         </div>
+        {hasPriceTable(priceTable)
+          ? (
+            <div className={styles['moneyRow']}>
+              <span className={styles['statValue']}>
+                {formatCny(estimateSpend(stats.inputTokens, 0, stats.cacheHitRate / 100, priceTable, isPeakHour()))}
+              </span>
+              <span className={styles['statLabel']}>
+                {t('stat60minMoney')}{isPeakHour() ? `（${t('peak')}）` : `（${t('offPeak')}）`}
+              </span>
+            </div>
+          )
+          : <span className={styles['statsNote']}>{t('statsNoPrice')}</span>}
         {stats.ok
           ? <span className={styles['statsNote']}>{t('statsNote')}</span>
           : <span className={styles['statsWarn']}>{t('statsUnavailable')}</span>}
@@ -272,6 +314,33 @@ export function HeadroomPanel(props: HeadroomPanelProps): ReactNode {
           </div>
           : null}
         {opBusy !== null ? <div className={styles['row']}><span className={styles['value']}>{opBusy}</span></div> : null}
+      </div>
+      <div className={styles['card']}>
+        <div className={styles['row']}>
+          <span className={styles['label']}>{t('priceTitle')}</span>
+          <button
+            type="button"
+            className="dsw-button"
+            onClick={() => {
+              if (hasPriceTable(priceTable)) { void priceScope?.unset('price') }
+              else { void priceScope?.set('price', DEEPSEEK_V4_FLASH_PRICES) }
+            }}
+          >
+            {hasPriceTable(priceTable) ? t('priceDisable') : t('priceEnable')}
+          </button>
+        </div>
+        {hasPriceTable(priceTable)
+          ? (
+            <div className={styles['priceGrid']}>
+              <PriceField label={t('priceHitPeak')} value={priceTable.hitPeak} onChange={(v) => { void priceScope?.set('price', { ...priceTable, hitPeak: v }) }} />
+              <PriceField label={t('priceHitOff')} value={priceTable.hitOffPeak} onChange={(v) => { void priceScope?.set('price', { ...priceTable, hitOffPeak: v }) }} />
+              <PriceField label={t('priceMissPeak')} value={priceTable.missPeak} onChange={(v) => { void priceScope?.set('price', { ...priceTable, missPeak: v }) }} />
+              <PriceField label={t('priceMissOff')} value={priceTable.missOffPeak} onChange={(v) => { void priceScope?.set('price', { ...priceTable, missOffPeak: v }) }} />
+              <PriceField label={t('priceOutPeak')} value={priceTable.outputPeak} onChange={(v) => { void priceScope?.set('price', { ...priceTable, outputPeak: v }) }} />
+              <PriceField label={t('priceOutOff')} value={priceTable.outputOffPeak} onChange={(v) => { void priceScope?.set('price', { ...priceTable, outputOffPeak: v }) }} />
+            </div>
+          )
+          : <span className={styles['statsNote']}>{t('priceHint')}</span>}
       </div>
       <div className={styles['notes']}>
         <span className={styles['notesTitle']}>{t('notes')}</span>
