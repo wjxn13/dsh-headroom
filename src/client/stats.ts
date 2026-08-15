@@ -216,6 +216,26 @@ export function estimateSpend(
   return (hit / 1_000_000) * hitPrice + (miss / 1_000_000) * missPrice + (outputTokens / 1_000_000) * outPrice
 }
 
+/**
+ * Estimate the money saved by compressing `tokens` tokens. These tokens never
+ * reached the wire, so the estimate is the simple input-price product — it
+ * deliberately does NOT split by cache hit rate, because Headroom's hit_rate
+ * is a request-level figure and its token split does not match DeepSeek's
+ * billing. Using the peak/off-peak input price (cache-miss list price as the
+ * conservative reference) gives an honest upper-ish bound labelled "estimate".
+ * @param tokens - tokens removed by compression.
+ * @param prices - the model's price set.
+ * @param peak - whether the current local hour is peak.
+ * @returns estimated saved money in CNY.
+ */
+export function savedMoneyEstimate(tokens: number, prices: ModelPrices, peak: boolean): number {
+  const missPrice = peak
+    ? priceOf(prices.missPeak, prices.missOffPeak, 1.5)
+    : priceOf(prices.missOffPeak, prices.missPeak, 1.5)
+  return (tokens / 1_000_000) * missPrice
+}
+
+
 export async function fetchHeadroomStats(base = 'http://127.0.0.1:8787'): Promise<HeadroomStatsView> {
   try {
     const controller = new AbortController()
