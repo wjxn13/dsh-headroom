@@ -47,9 +47,10 @@ export function apply(ctx: ClientContext): void {
 
   const scope = ctx.settingsScope.bind<DeepSeekRouteSettings>({ namespace: LLM_DEEPSEEK_NAMESPACE })
   const useSnapshot = bindSnapshotSelector(scope)
-  // Price-table configuration lives in this plugin's own namespace so users can
-  // set peak/off-peak CNY prices without touching the provider settings.
-  const priceScope = ctx.settingsScope.bind<{ price?: import('./stats.ts').PriceTable }>({ namespace: 'dsh-headroom' })
+  // Price-table configuration rides the existing (registered) llm-deepseek
+  // namespace as an extra priceTable field - schemastery's z.object keeps
+  // unknown keys, so the write succeeds and persists without a restart.
+  const priceScope = ctx.settingsScope.bind<{ priceTable?: import('./stats.ts').PriceTable }>({ namespace: LLM_DEEPSEEK_NAMESPACE })
   const usePriceSnapshot = bindSnapshotSelector(priceScope)
   const t = ctx.locale.bind(NS) as HeadroomPanelInjected['t']
   // Host command channel: execute('/headroom start') etc. via the commands remote.

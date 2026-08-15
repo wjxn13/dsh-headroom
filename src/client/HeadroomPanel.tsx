@@ -39,9 +39,9 @@ export interface HeadroomPanelInjected {
   /** uSES hook bound to the scope snapshot. */
   useSnapshot: SnapshotSelectorHook<SettingsScopeSnapshot<DeepSeekRouteSettings>>
   /** Price-table configuration scope (this plugin's own namespace). */
-  priceScope: SettingsScope<{ price?: PriceTable }>
+  priceScope: SettingsScope<{ priceTable?: PriceTable }>
   /** uSES hook bound to the price scope. */
-  usePriceSnapshot: SnapshotSelectorHook<SettingsScopeSnapshot<{ price?: PriceTable }>>
+  usePriceSnapshot: SnapshotSelectorHook<SettingsScopeSnapshot<{ priceTable?: PriceTable }>>
   /** Panel copy. */
   t: (key: keyof typeof en) => string
   /** Execute a host command (e.g. '/headroom start') and return its result. */
@@ -126,7 +126,7 @@ export function HeadroomPanel(props: HeadroomPanelProps): ReactNode {
   if (scope === undefined || useSnapshot === undefined || t === undefined) return null
   const snapshot = useSnapshot((s) => s)
   const priceSnapshot = usePriceSnapshot?.((s) => s)
-  const priceTable = priceSnapshot?.value?.price
+  const priceTable = priceSnapshot?.value?.priceTable
   const baseURL = snapshot.value?.baseURL
   const writable = snapshot.writable === true
   const route = routeOf(baseURL)
@@ -322,8 +322,8 @@ export function HeadroomPanel(props: HeadroomPanelProps): ReactNode {
             type="button"
             className="dsw-button"
             onClick={() => {
-              if (hasPriceTable(priceTable)) { void priceScope?.unset('price') }
-              else { void priceScope?.set('price', DEEPSEEK_V4_FLASH_PRICES) }
+              if (hasPriceTable(priceTable)) { void priceScope?.unset('priceTable') }
+              else { void priceScope?.set('priceTable', DEEPSEEK_V4_FLASH_PRICES) }
             }}
           >
             {hasPriceTable(priceTable) ? t('priceDisable') : t('priceEnable')}
@@ -332,12 +332,12 @@ export function HeadroomPanel(props: HeadroomPanelProps): ReactNode {
         {hasPriceTable(priceTable)
           ? (
             <div className={styles['priceGrid']}>
-              <PriceField label={t('priceHitPeak')} value={priceTable.hitPeak} onChange={(v) => { void priceScope?.set('price', { ...priceTable, hitPeak: v }) }} />
-              <PriceField label={t('priceHitOff')} value={priceTable.hitOffPeak} onChange={(v) => { void priceScope?.set('price', { ...priceTable, hitOffPeak: v }) }} />
-              <PriceField label={t('priceMissPeak')} value={priceTable.missPeak} onChange={(v) => { void priceScope?.set('price', { ...priceTable, missPeak: v }) }} />
-              <PriceField label={t('priceMissOff')} value={priceTable.missOffPeak} onChange={(v) => { void priceScope?.set('price', { ...priceTable, missOffPeak: v }) }} />
-              <PriceField label={t('priceOutPeak')} value={priceTable.outputPeak} onChange={(v) => { void priceScope?.set('price', { ...priceTable, outputPeak: v }) }} />
-              <PriceField label={t('priceOutOff')} value={priceTable.outputOffPeak} onChange={(v) => { void priceScope?.set('price', { ...priceTable, outputOffPeak: v }) }} />
+              <PriceField label={t('priceHitPeak')} value={priceTable.hitPeak} onChange={(v) => { void priceScope?.set('priceTable', { ...priceTable, hitPeak: v }) }} />
+              <PriceField label={t('priceHitOff')} value={priceTable.hitOffPeak} onChange={(v) => { void priceScope?.set('priceTable', { ...priceTable, hitOffPeak: v }) }} />
+              <PriceField label={t('priceMissPeak')} value={priceTable.missPeak} onChange={(v) => { void priceScope?.set('priceTable', { ...priceTable, missPeak: v }) }} />
+              <PriceField label={t('priceMissOff')} value={priceTable.missOffPeak} onChange={(v) => { void priceScope?.set('priceTable', { ...priceTable, missOffPeak: v }) }} />
+              <PriceField label={t('priceOutPeak')} value={priceTable.outputPeak} onChange={(v) => { void priceScope?.set('priceTable', { ...priceTable, outputPeak: v }) }} />
+              <PriceField label={t('priceOutOff')} value={priceTable.outputOffPeak} onChange={(v) => { void priceScope?.set('priceTable', { ...priceTable, outputOffPeak: v }) }} />
             </div>
           )
           : <span className={styles['statsNote']}>{t('priceHint')}</span>}
