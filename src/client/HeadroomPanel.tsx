@@ -35,6 +35,8 @@ export interface HeadroomPanelInjected {
   useSnapshot: SnapshotSelectorHook<SettingsScopeSnapshot<DeepSeekRouteSettings>>
   /** Panel copy. */
   t: (key: keyof typeof en) => string
+  /** Execute a host command (e.g. '/headroom start') and return its result. */
+  runCommand: (line: string) => Promise<{ kind: 'success' | 'error'; text: string }>
 }
 
 /** Props delivered by the slot outlet (inject face spread flat). */
@@ -85,7 +87,7 @@ async function probeHeadroom(): Promise<Exclude<ProbeState, { kind: 'idle' | 'pr
  * @returns the panel content.
  */
 export function HeadroomPanel(props: HeadroomPanelProps): ReactNode {
-  const { scope, useSnapshot, t } = props
+  const { scope, useSnapshot, t, runCommand } = props
   if (scope === undefined || useSnapshot === undefined || t === undefined) return null
   const snapshot = useSnapshot((s) => s)
   const baseURL = snapshot.value?.baseURL
@@ -95,6 +97,8 @@ export function HeadroomPanel(props: HeadroomPanelProps): ReactNode {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
+  const [opBusy, setOpBusy] = useState<string | null>(null)
+  const [opResult, setOpResult] = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
 
   useEffect(() => {
     if (route !== 'headroom' || probe.kind !== 'idle') return
@@ -115,6 +119,23 @@ export function HeadroomPanel(props: HeadroomPanelProps): ReactNode {
       setError(failure instanceof Error ? failure.message : String(failure))
     } finally {
       setBusy(false)
+    }
+  }
+
+  const runLifecycle = async (command: string, label: string): Promise<void> => {
+    if (runCommand === undefined) return
+    setOpBusy(label)
+    setOpResult(null)
+    try {
+      const result = await runCommand(command)
+      setOpResult(result)
+      // Refresh the health probe after start/stop so the badge reflects reality.
+      setProbe({ kind: 'probing' })
+      void probeHeadroom().then(setProbe)
+    } catch (failure) {
+      setOpResult({ kind: 'error', text: failure instanceof Error ? failure.message : String(failure) })
+    } finally {
+      setOpBusy(null)
     }
   }
 
@@ -160,6 +181,43 @@ export function HeadroomPanel(props: HeadroomPanelProps): ReactNode {
         </div>
         {done ? <div className={styles['row']}><span className={styles['value']}>{t('switched')}</span></div> : null}
         {error !== null ? <div className={styles['warning']}>{t('error').replace('{message}', error)}</div> : null}
+      </div>
+      <div className={styles['card']}>
+        <div className={styles['row']}>
+          <span className={styles['label']}>{t('lifecycle')}</span>
+        </div>
+        <div className={styles['actions']}>
+          <button
+            type="button"
+            className="dsw-button"
+            disabled={opBusy !== null}
+            onClick={() => { void runLifecycle('/headroom-install', t('installing')) }}
+          >
+            {opBusy === t('installing') ? t('installing') : t('install')}
+          </button>
+          <button
+            type="button"
+            className="dsw-button dsw-button--primary"
+            disabled={opBusy !== null}
+            onClick={() => { void runLifecycle('/headroom-start', t('starting')) }}
+          >
+            {opBusy === t('starting') ? t('starting') : t('start')}
+          </button>
+          <button
+            type="button"
+            className="dsw-button"
+            disabled={opBusy !== null}
+            onClick={() => { void runLifecycle('/headroom-stop', t('stopping')) }}
+          >
+            {opBusy === t('stopping') ? t('stopping') : t('stop')}
+          </button>
+        </div>
+        {opResult !== null
+          ? <div className={opResult.kind === 'error' ? styles['warning'] : styles['row']}>
+            <span className={styles['value']}>{opResult.text}</span>
+          </div>
+          : null}
+        {opBusy !== null ? <div className={styles['row']}><span className={styles['value']}>{opBusy}</span></div> : null}
       </div>
       <div className={styles['notes']}>
         <span className={styles['notesTitle']}>{t('notes')}</span>

@@ -13,6 +13,7 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
+import type {} from '@deepseek-ai/dsh-commands'
 import { spawn, execFile } from 'node:child_process'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -200,27 +201,99 @@ export async function startProxy(log: (message: string) => void): Promise<{ ok: 
 export async function stopProxy(log: (message: string) => void): Promise<{ ok: boolean; message: string }> {
   const health = await probeHealth(1500)
   if (!health.healthy) return { ok: true, message: 'Headroom is not running.' }
-  if (process.platform === 'win32') {
-    const code = await new Promise<number>((resolve) => {
-      execFile('taskkill', ['/PID', '/T', '/F'], { timeout: 8000 }, (error) => resolve(error ? 1 : 0))
+  // Kill whatever listens on the plugin port (Windows: taskkill by PID tree).
+  const owner = await new Promise<number | undefined>((resolve) => {
+    execFile('powershell', [
+      '-NoProfile', '-Command',
+      `(Get-NetTCPConnection -LocalPort ${HEADROOM_PORT} -State Listen -ErrorAction SilentlyContinue).OwningProcess`,
+    ], { timeout: 8000 }, (error, stdout) => {
+      if (error) { resolve(undefined); return }
+      const pid = Number(String(stdout).trim())
+      resolve(Number.isInteger(pid) && pid > 0 ? pid : undefined)
     })
-    void code
-  }
-  // Fallback: kill whatever listens on the port via netstat + taskkill.
-  await new Promise<void>((resolve) => {
-    execFile('taskkill', ['/F', '/IM', 'headroom.exe'], { timeout: 8000 }, () => resolve())
   })
+  if (owner !== undefined) {
+    await new Promise<void>((resolve) => {
+      execFile('taskkill', ['/PID', String(owner), '/T', '/F'], { timeout: 8000 }, () => resolve())
+    })
+  } else {
+    // Fallback: kill by image name.
+    await new Promise<void>((resolve) => {
+      execFile('taskkill', ['/F', '/IM', 'headroom.exe'], { timeout: 8000 }, () => resolve())
+    })
+  }
   log('Headroom proxy stopped.')
   return { ok: true, message: 'Headroom proxy stopped.' }
 }
 
+/** Current status: installed? running? healthy? */
+export async function status(): Promise<{
+  installed: boolean
+  running: boolean
+  healthy: boolean
+  version?: string
+  python?: string
+}> {
+  const [health, py] = await Promise.all([probeHealth(2000), findSystemPython()])
+  return {
+    installed: venvReady(),
+    running: health.healthy,
+    healthy: health.healthy,
+    version: health.version,
+    python: py,
+  }
+}
+
 /**
- * cordis entry. The host half registers plugin metadata; the browser half
- * drives the UI. All heavy work is exposed as exported functions so tests and
- * CLI users can call them directly.
+ * cordis entry. Registers the `/headroom` command family so both the browser
+ * UI and the agent can drive the Headroom lifecycle through the standard
+ * command channel. The heavy work lives in the exported functions above.
  */
-export function apply(_ctx: Context): void {
-  // Intentionally minimal: process management runs on demand from the UI.
-  // The plugin registers no host tools; the settings seam it writes is the
-  // `llm-deepseek` namespace, owned by the dsh-llm-deepseek adapter.
+export const inject = ['commands']
+
+export function apply(ctx: Context): void {
+  const log = (message: string): void => { ctx.logger?.info(`[dsh-headroom] ${message}`) }
+
+  ctx.effect(function* () {
+    yield ctx.commands.register({
+      name: 'headroom-status',
+      description: 'Show Headroom proxy status (installed / running / healthy)',
+      handler: async () => {
+        const s = await status()
+        const text = [
+          `Headroom: ${s.healthy ? `healthy v${s.version ?? '?'}` : s.running ? 'running (not healthy yet)' : 'not running'}`,
+          `Installed: ${s.installed ? 'yes (plugin venv)' : 'no (run /headroom install)'}`,
+          `Python: ${s.python ?? 'not found'}`,
+        ].join('\n')
+        return { kind: 'success', text }
+      },
+    })
+
+    yield ctx.commands.register({
+      name: 'headroom-install',
+      description: 'Install the Headroom compression engine into the plugin venv',
+      handler: async () => {
+        const result = await ensureInstalled(log)
+        return { kind: result.ok ? 'success' : 'error', text: result.message }
+      },
+    })
+
+    yield ctx.commands.register({
+      name: 'headroom-start',
+      description: 'Start the Headroom compression proxy (with DeepSeek compatibility presets)',
+      handler: async () => {
+        const result = await startProxy(log)
+        return { kind: result.ok ? 'success' : 'error', text: result.message }
+      },
+    })
+
+    yield ctx.commands.register({
+      name: 'headroom-stop',
+      description: 'Stop the Headroom compression proxy',
+      handler: async () => {
+        const result = await stopProxy(log)
+        return { kind: result.ok ? 'success' : 'error', text: result.message }
+      },
+    })
+  }, 'dsh-headroom command lifecycle')
 }

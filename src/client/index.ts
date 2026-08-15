@@ -32,9 +32,10 @@ const NS = 'dsh-headroom'
  * Required services (cordis fiber inject). The `settings.section` declaration
  * lives in ui-settings-general's SettingsRoot entry; registration waits on it
  * through `slots.inject()`. `settingsScope` supplies the hot-reloaded
- * `llm-deepseek` namespace scope.
+ * `llm-deepseek` namespace scope; `remote` exposes the host command channel
+ * used by the lifecycle buttons; `sessions` resolves the active agent id.
  */
-export const inject = ['slots', 'locale', 'connection', 'remote', 'settingsScope']
+export const inject = ['slots', 'locale', 'connection', 'remote', 'settingsScope', 'sessions']
 
 /**
  * Register the Headroom panel once the `settings.section` declaration is on
@@ -47,7 +48,32 @@ export function apply(ctx: ClientContext): void {
   const scope = ctx.settingsScope.bind<DeepSeekRouteSettings>({ namespace: LLM_DEEPSEEK_NAMESPACE })
   const useSnapshot = bindSnapshotSelector(scope)
   const t = ctx.locale.bind(NS) as HeadroomPanelInjected['t']
-  const injected = (): HeadroomPanelInjected => ({ scope, useSnapshot, t })
+  // Host command channel: execute('/headroom start') etc. via the commands remote.
+  const remote = ctx.get('remote') as { command?: { execute: (agentId: unknown, line: string) => Promise<unknown> } } | undefined
+  const sessions = ctx.get('sessions') as { current?: () => { sessionId: string } | undefined } | undefined
+  const injected = (): HeadroomPanelInjected => ({
+    scope,
+    useSnapshot,
+    t,
+    runCommand: async (line: string) => {
+      // Resolve the current agent session id for the command RPC; fall back to
+      // "current" when no session service is available.
+      let agentId: unknown = 'current'
+      try {
+        const current = sessions?.current?.()
+        if (current !== undefined) agentId = current.sessionId
+      } catch { /* keep 'current' */ }
+      if (remote?.command?.execute === undefined) {
+        return { kind: 'error', text: t('error').replace('{message}', 'host command channel unavailable') }
+      }
+      const raw = await remote.command.execute(agentId, line)
+      const result = (raw as { result?: { kind?: string; text?: string } } | undefined)?.result
+      return {
+        kind: result?.kind === 'error' ? 'error' : 'success',
+        text: result?.text ?? String(raw),
+      }
+    },
+  })
 
   ctx.slots.inject('settings.section', () => ctx.slots.register({
     name: 'settings.section',

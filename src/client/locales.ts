@@ -26,6 +26,13 @@ export const zh = {
   'noteCache': 'Headroom 的改写是确定性的，前缀缓存命中率不受影响（实测 97.6%+）。',
   'noteQuality': '压缩只作用于工具描述等非关键内容，对话与工具结果不受影响。',
   'noteFallback': '线路故障时可在此页一键切回直连，无需重启。',
+  'lifecycle': '引擎管理',
+  'install': '安装 Headroom 引擎',
+  'installing': '安装中…',
+  'start': '启动代理',
+  'starting': '启动中…',
+  'stop': '停止代理',
+  'stopping': '停止中…',
 } as const
 
 export const en = {
@@ -51,6 +58,13 @@ export const en = {
   'noteCache': 'Headroom rewrites are deterministic; prefix cache hit rate is unaffected (measured 97.6%+).',
   'noteQuality': 'Compression only touches tool descriptions, never conversation or tool results.',
   'noteFallback': 'If the route fails, switch back here with one click. No restart needed.',
+  'lifecycle': 'Engine management',
+  'install': 'Install Headroom engine',
+  'installing': 'Installing…',
+  'start': 'Start proxy',
+  'starting': 'Starting…',
+  'stop': 'Stop proxy',
+  'stopping': 'Stopping…',
 } as const
 
 export type HeadroomPanelKey = keyof typeof zh
