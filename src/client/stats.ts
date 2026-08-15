@@ -47,6 +47,8 @@ export interface HeadroomStatsView {
   inputTokens: number
   /** Tokens removed by compression (lifetime). */
   tokensSaved: number
+  /** Tokens removed by compression in the rolling 60-min window. */
+  sessionSavedTokens: number
   /** Total input tokens (lifetime). */
   lifetimeInputTokens: number
   /** Provider prefix-cache discount in USD (lifetime) — NOT Headroom's doing. */
@@ -65,6 +67,7 @@ export interface HeadroomStatsView {
 export const EMPTY_STATS: HeadroomStatsView = {
   inputTokens: 0,
   tokensSaved: 0,
+  sessionSavedTokens: 0,
   lifetimeInputTokens: 0,
   cacheDiscountUsd: 0,
   cacheHitRate: 0,
@@ -228,6 +231,7 @@ export async function fetchHeadroomStats(base = 'http://127.0.0.1:8787'): Promis
         // display_session is Headroom's rolling 60-minute activity window.
         inputTokens: session?.total_input_tokens ?? lifetime?.total_input_tokens ?? 0,
         tokensSaved: lifetime?.tokens_saved ?? 0,
+        sessionSavedTokens: session?.tokens_saved ?? 0,
         lifetimeInputTokens: lifetime?.total_input_tokens ?? 0,
         cacheDiscountUsd: lifetime?.cache_savings_usd ?? 0,
         cacheHitRate: cache?.hit_rate ?? 0,

@@ -228,6 +228,7 @@ export function HeadroomPanel(props: HeadroomPanelProps): ReactNode {
         </div>
         {hasPriceTable(priceTable)
           ? (
+            <>
             <div className={styles['moneyRow']}>
               <span className={styles['statValue']}>
                 {formatCny(estimateSpend(stats.inputTokens, 0, stats.cacheHitRate / 100, pricesForModel(priceTable, modelId), isPeakHour(priceTable?.window)))}
@@ -236,6 +237,15 @@ export function HeadroomPanel(props: HeadroomPanelProps): ReactNode {
                 {t('stat60minMoney')}{isPeakHour(priceTable?.window) ? `（${t('peak')}）` : `（${t('offPeak')}）`}
               </span>
             </div>
+            <div className={styles['moneyRow']}>
+              <span className={styles['statValue']}>
+                {formatCny(estimateSpend(stats.sessionSavedTokens, 0, stats.cacheHitRate / 100, pricesForModel(priceTable, modelId), isPeakHour(priceTable?.window)))}
+              </span>
+              <span className={styles['statLabel']}>
+                {t('statSavedMoney')}
+              </span>
+            </div>
+            </>
           )
           : <span className={styles['statsNote']}>{t('statsNoPrice')}</span>}
         {stats.ok
