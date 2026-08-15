@@ -18,6 +18,8 @@ import type { ReactNode } from 'react'
 import type { SettingsScope, SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
 import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-web-react'
 import { DIRECT_BASE_URL, HEADROOM_BASE_URL, HEADROOM_LIVEZ_URL } from '../constants.ts'
+import { EMPTY_STATS, fetchHeadroomStats, formatTokens, formatUsd } from './stats.ts'
+import type { HeadroomStatsView } from './stats.ts'
 import type { en } from './locales.ts'
 import styles from './HeadroomPanel.module.css'
 
@@ -99,12 +101,28 @@ export function HeadroomPanel(props: HeadroomPanelProps): ReactNode {
   const [done, setDone] = useState(false)
   const [opBusy, setOpBusy] = useState<string | null>(null)
   const [opResult, setOpResult] = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
+  const [stats, setStats] = useState<HeadroomStatsView>(EMPTY_STATS)
 
   useEffect(() => {
     if (route !== 'headroom' || probe.kind !== 'idle') return
     setProbe({ kind: 'probing' })
     void probeHeadroom().then(setProbe)
   }, [route, probe.kind])
+
+  // Live stats: poll Headroom /stats every 10s while the panel is mounted.
+  useEffect(() => {
+    let alive = true
+    const refresh = async (): Promise<void> => {
+      const next = await fetchHeadroomStats()
+      if (alive) setStats(next)
+    }
+    void refresh()
+    const timer = setInterval(() => { void refresh() }, 10_000)
+    return () => {
+      alive = false
+      clearInterval(timer)
+    }
+  }, [])
 
   const switchRoute = async (target: 'direct' | 'headroom'): Promise<void> => {
     if (!writable) return
@@ -145,6 +163,38 @@ export function HeadroomPanel(props: HeadroomPanelProps): ReactNode {
 
   return (
     <section className={styles['section']} aria-label={t('title')}>
+      <div className={styles['statsCard']}>
+        <div className={styles['statsTitle']}>{t('statsTitle')}</div>
+        <div className={styles['statsGrid']}>
+          <div className={styles['statCell']}>
+            <span className={styles['statValue']}>{formatTokens(stats.inputTokens)}</span>
+            <span className={styles['statLabel']}>{t('statSpent')}</span>
+          </div>
+          <div className={styles['statCell']}>
+            <span className={styles['statValue']}>{formatTokens(stats.tokensSaved)}</span>
+            <span className={styles['statLabel']}>{t('statSaved')}</span>
+          </div>
+          <div className={styles['statCell']}>
+            <span className={styles['statValue']}>{formatUsd(stats.savingsUsd)}</span>
+            <span className={styles['statLabel']}>{t('statSavingsUsd')}</span>
+          </div>
+          <div className={styles['statCell']}>
+            <span className={styles['statValue']}>{formatUsd(stats.costUsd)}</span>
+            <span className={styles['statLabel']}>{t('statCostUsd')}</span>
+          </div>
+          <div className={styles['statCell']}>
+            <span className={styles['statValue']}>{stats.cacheHitRate > 0 ? `${stats.cacheHitRate.toFixed(1)}%` : '—'}</span>
+            <span className={styles['statLabel']}>{t('statCacheHit')}</span>
+          </div>
+          <div className={styles['statCell']}>
+            <span className={styles['statValue']}>{stats.requests > 0 ? String(stats.requests) : '—'}</span>
+            <span className={styles['statLabel']}>{t('statRequests')}</span>
+          </div>
+        </div>
+        {stats.ok
+          ? <span className={styles['statsNote']}>{t('statsNote')}</span>
+          : <span className={styles['statsWarn']}>{t('statsUnavailable')}</span>}
+      </div>
       <div className={styles['card']}>
         <div className={styles['row']}>
           <span className={styles['label']}>{t('current')}</span>

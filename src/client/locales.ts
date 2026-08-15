@@ -33,6 +33,15 @@ export const zh = {
   'starting': '启动中…',
   'stop': '停止代理',
   'stopping': '停止中…',
+  'statsTitle': 'Token 节省统计（实时）',
+  'statSpent': '本会话花费 token',
+  'statSaved': '累计节省 token',
+  'statSavingsUsd': '累计节省金额',
+  'statCostUsd': '本会话花费金额',
+  'statCacheHit': '缓存命中率',
+  'statRequests': '累计请求数',
+  'statsNote': '每 10 秒自动刷新；金额按 Headroom 内置价格估算，随供应商调整变化。',
+  'statsUnavailable': '统计不可用（Headroom 未运行）',
 } as const
 
 export const en = {
@@ -65,6 +74,15 @@ export const en = {
   'starting': 'Starting…',
   'stop': 'Stop proxy',
   'stopping': 'Stopping…',
+  'statsTitle': 'Token savings (live)',
+  'statSpent': 'Tokens spent (session)',
+  'statSaved': 'Tokens saved (lifetime)',
+  'statSavingsUsd': 'Saved (lifetime)',
+  'statCostUsd': 'Spent (session)',
+  'statCacheHit': 'Cache hit rate',
+  'statRequests': 'Requests (lifetime)',
+  'statsNote': 'Auto-refreshes every 10s; USD is Headroom\'s estimate and tracks provider pricing.',
+  'statsUnavailable': 'Stats unavailable (Headroom not running)',
 } as const
 
 export type HeadroomPanelKey = keyof typeof zh

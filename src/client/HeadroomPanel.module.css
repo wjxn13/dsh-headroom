@@ -4,6 +4,55 @@
   gap: 16px;
 }
 
+.statsCard {
+  border: 1px solid var(--dsw-color-border-strong, #d0d7de);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--dsw-color-canvas-subtle, #f6f8fa);
+}
+
+.statsTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--dsw-color-text-primary, #1f2328);
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.statCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.statValue {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--dsw-color-accent-fg, #0969da);
+}
+
+.statLabel {
+  font-size: 11px;
+  color: var(--dsw-color-text-secondary, #57606a);
+}
+
+.statsNote {
+  font-size: 11px;
+  color: var(--dsw-color-text-secondary, #57606a);
+}
+
+.statsWarn {
+  font-size: 11px;
+  color: var(--dsw-color-danger-fg, #cf222e);
+}
+
 .card {
   border: 1px solid var(--dsw-color-border-strong, #d0d7de);
   border-radius: 8px;
