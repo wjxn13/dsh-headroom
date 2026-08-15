@@ -36,11 +36,12 @@ export const zh = {
   'statsTitle': 'Token 节省统计（实时）',
   'statSpent': '本会话花费 token',
   'statSaved': '累计节省 token',
-  'statSavingsUsd': '累计节省金额',
+  'statCompressionUsd': '压缩节省金额',
+  'statCacheDiscountUsd': '缓存折扣（DeepSeek 官方）',
   'statCostUsd': '本会话花费金额',
   'statCacheHit': '缓存命中率',
   'statRequests': '累计请求数',
-  'statsNote': '每 10 秒自动刷新；金额按 Headroom 内置价格估算，随供应商调整变化。',
+  'statsNote': '每 10 秒自动刷新；压缩节省为 Headroom 实际压缩掉的 token 金额，缓存折扣是 DeepSeek 官方前缀缓存机制（非 Headroom 功劳），金额按内置价格估算。',
   'statsUnavailable': '统计不可用（Headroom 未运行）',
 } as const
 
@@ -77,11 +78,12 @@ export const en = {
   'statsTitle': 'Token savings (live)',
   'statSpent': 'Tokens spent (session)',
   'statSaved': 'Tokens saved (lifetime)',
-  'statSavingsUsd': 'Saved (lifetime)',
+  'statCompressionUsd': 'Compression saved (lifetime)',
+  'statCacheDiscountUsd': 'Cache discount (DeepSeek native)',
   'statCostUsd': 'Spent (session)',
   'statCacheHit': 'Cache hit rate',
   'statRequests': 'Requests (lifetime)',
-  'statsNote': 'Auto-refreshes every 10s; USD is Headroom\'s estimate and tracks provider pricing.',
+  'statsNote': 'Auto-refreshes every 10s; compression savings = tokens Headroom actually removed; cache discount is DeepSeek\'s native prefix-cache mechanism (not Headroom\'s doing); USD is an estimate.',
   'statsUnavailable': 'Stats unavailable (Headroom not running)',
 } as const
 

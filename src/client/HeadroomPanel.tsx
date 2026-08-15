@@ -176,7 +176,11 @@ export function HeadroomPanel(props: HeadroomPanelProps): ReactNode {
           </div>
           <div className={styles['statCell']}>
             <span className={styles['statValue']}>{formatUsd(stats.savingsUsd)}</span>
-            <span className={styles['statLabel']}>{t('statSavingsUsd')}</span>
+            <span className={styles['statLabel']}>{t('statCompressionUsd')}</span>
+          </div>
+          <div className={styles['statCell']}>
+            <span className={styles['statValue']}>{formatUsd(stats.cacheDiscountUsd)}</span>
+            <span className={styles['statLabel']}>{t('statCacheDiscountUsd')}</span>
           </div>
           <div className={styles['statCell']}>
             <span className={styles['statValue']}>{formatUsd(stats.costUsd)}</span>

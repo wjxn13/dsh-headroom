@@ -43,8 +43,10 @@ export interface HeadroomStatsView {
   inputTokens: number
   /** Tokens removed by compression (lifetime). */
   tokensSaved: number
-  /** Combined compression + cache savings in USD (lifetime). */
+  /** Compression savings in USD (lifetime) — the honest Headroom contribution. */
   savingsUsd: number
+  /** Provider prefix-cache discount in USD (lifetime) — NOT Headroom's doing. */
+  cacheDiscountUsd: number
   /** Total input cost in USD this session window. */
   costUsd: number
   /** Prefix cache hit rate (0-100). */
@@ -62,6 +64,7 @@ export const EMPTY_STATS: HeadroomStatsView = {
   inputTokens: 0,
   tokensSaved: 0,
   savingsUsd: 0,
+  cacheDiscountUsd: 0,
   costUsd: 0,
   cacheHitRate: 0,
   cacheReadTokens: 0,
@@ -89,7 +92,11 @@ export async function fetchHeadroomStats(base = 'http://127.0.0.1:8787'): Promis
       return {
         inputTokens: session?.total_input_tokens ?? lifetime?.total_input_tokens ?? 0,
         tokensSaved: lifetime?.tokens_saved ?? 0,
-        savingsUsd: (lifetime?.compression_savings_usd ?? 0) + (lifetime?.cache_savings_usd ?? 0),
+        // Honest Headroom contribution: only compression removes tokens.
+        savingsUsd: lifetime?.compression_savings_usd ?? 0,
+        // Provider-native prefix-cache discount, reported separately — it is
+        // DeepSeek's mechanism, not Headroom's (Headroom merely avoids busting it).
+        cacheDiscountUsd: lifetime?.cache_savings_usd ?? 0,
         costUsd: session?.total_input_cost_usd ?? lifetime?.total_input_cost_usd ?? 0,
         cacheHitRate: cache?.hit_rate ?? 0,
         cacheReadTokens: cache?.cache_read_tokens ?? lifetime?.cache_read_tokens ?? 0,
