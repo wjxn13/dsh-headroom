@@ -67,7 +67,7 @@ DSH 每次请求会**全量发送工具 schema**（数十个工具的完整 JSON
 
 ## 与 dsh-caveman 配合（输入 + 输出一起省）
 
-本插件管**输入侧**（请求层压缩，保缓存）。输出的冗余交给 [dsh-caveman](https://github.com/wjxn13/dsh-caveman)——让 AI 少说废话、精简输出（平均省 65% 输出 token），技术信息完整保留。两者正交、互补、不冲突：
+本插件管**输入侧**（请求层压缩，保缓存）。输出的冗余交给 [dsh-caveman](https://github.com/wjxn13/dsh-caveman)——让 AI 少说废话、精简输出（caveman 官方称平均省 65% 输出 token，本机未实测），技术信息完整保留。两者正交、互补、不冲突：
 
 | | dsh-headroom（本插件） | dsh-caveman |
 |---|---|---|
