@@ -65,6 +65,22 @@ DSH 每次请求会**全量发送工具 schema**（数十个工具的完整 JSON
 
 > **在 DSH 自身压缩之上，把每次请求的冗余压到极致**——日常每请求稳定压缩，偶发大输出大幅压缩，配合 99.9% 缓存命中，让 token 消耗逼近理论下限。
 
+## 与 dsh-caveman 配合（输入 + 输出一起省）
+
+本插件管**输入侧**（请求层压缩，保缓存）。输出的冗余交给 [dsh-caveman](https://github.com/wjxn13/dsh-caveman)——让 AI 少说废话、精简输出（平均省 65% 输出 token），技术信息完整保留。两者正交、互补、不冲突：
+
+| | dsh-headroom（本插件） | dsh-caveman |
+|---|---|---|
+| 省哪侧 | 输入 token | 输出 token |
+| 机制 | Headroom 代理（无损保缓存） | 提示词规则（删废话） |
+| 省钱大头 | 99.9% 缓存命中 | 65% 输出精简 |
+
+一个管**进**（把发给模型的输入压到最省，还不破坏缓存），一个管**出**（把模型吐出来的输出压到最省）。两个都装，token 消耗逼近理论下限。
+
+```bash
+dsh plugin --profile web add "github:wjxn13/dsh-caveman#path:/dsh-plugin"
+```
+
 ## 安装
 
 ### 前置条件
