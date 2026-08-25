@@ -157,6 +157,11 @@ export function HeadroomPanel(props: HeadroomPanelProps): ReactNode {
     }
   }
 
+  // NOTE: proxy process start/stop buttons were removed from this panel.
+  // Process lifecycle is owned by the dsh-headroom-manager plugin ("代理管理"
+  // settings section); this panel keeps only engine install + route switching
+  // + token stats to avoid two competing sets of start/stop controls.
+
   const routeLabel = route === 'direct' ? t('routeDirect')
     : route === 'headroom' ? t('routeHeadroom')
       : t('routeUnknown')
@@ -237,6 +242,7 @@ export function HeadroomPanel(props: HeadroomPanelProps): ReactNode {
           <span className={styles['label']}>{t('lifecycle')}</span>
         </div>
         <div className={styles['actions']}>
+          {/* start/stop removed — owned by dsh-headroom-manager ("代理管理") */}
           <button
             type="button"
             className="dsw-button"
@@ -244,22 +250,6 @@ export function HeadroomPanel(props: HeadroomPanelProps): ReactNode {
             onClick={() => { void runLifecycle('/headroom-install', t('installing')) }}
           >
             {opBusy === t('installing') ? t('installing') : t('install')}
-          </button>
-          <button
-            type="button"
-            className="dsw-button dsw-button--primary"
-            disabled={opBusy !== null}
-            onClick={() => { void runLifecycle('/headroom-start', t('starting')) }}
-          >
-            {opBusy === t('starting') ? t('starting') : t('start')}
-          </button>
-          <button
-            type="button"
-            className="dsw-button"
-            disabled={opBusy !== null}
-            onClick={() => { void runLifecycle('/headroom-stop', t('stopping')) }}
-          >
-            {opBusy === t('stopping') ? t('stopping') : t('stop')}
           </button>
         </div>
         {opResult !== null
