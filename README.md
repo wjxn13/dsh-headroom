@@ -1,5 +1,14 @@
 # dsh-headroom
 
+> **⚠️ 已合并（DEPRECATED）**：本插件已与 dsh-headroom-manager 合并为
+> [dsh-headroom-suite](https://github.com/wjxn13/dsh-headroom-suite)（二合一套件，
+> 一条命令装齐线路切换 + 代理管理）。本仓库保留作历史参考，建议直接安装套件：
+>
+> ```bash
+> dsh plugin --profile web add github:wjxn13/dsh-headroom-suite#main
+> ```
+
+
 DeepSeek Harness 的 Headroom 上下文压缩代理集成插件：一键检测、安装、启动
 [Headroom](https://github.com/headroomlabs-ai/headroom) 压缩代理，并自动接入 DeepSeek
 线路（OpenAI 协议），在设置页提供状态面板与切换控件。
