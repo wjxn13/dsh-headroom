@@ -1,5 +1,11 @@
 # dsh-headroom
 
+## 兼容的 Harness 版本
+
+- **已验证支持**：DeepSeek Harness `0.1.0-rc.6`（web profile）。
+- **最新版 `0.1.2-alpha.3`**：适配计划进行中，暂无确切完成时间。升级前请先备份你的 DSH 安装。
+
+
 > **⚠️ 已合并（DEPRECATED）**：本插件已与 dsh-headroom-manager 合并为
 > [dsh-headroom-suite](https://github.com/wjxn13/dsh-headroom-suite)（二合一套件，
 > 一条命令装齐线路切换 + 代理管理）。本仓库保留作历史参考，建议直接安装套件：
