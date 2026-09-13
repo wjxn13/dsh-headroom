@@ -15,8 +15,7 @@
 
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import type { SettingsScope, SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
-import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-web-react'
+import type { SettingsScope, SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
 import { DIRECT_BASE_URL, HEADROOM_BASE_URL, HEADROOM_LIVEZ_URL } from '../constants.ts'
 import { EMPTY_STATS, fetchHeadroomStats, formatTokens } from './stats.ts'
 import type { HeadroomStatsView } from './stats.ts'
@@ -28,6 +27,13 @@ export interface DeepSeekRouteSettings {
   /** The configured endpoint override; undefined means the composition default. */
   baseURL?: string
 }
+
+/**
+ * Selector-hook shape bound to a scope snapshot. Previously imported from
+ * `@deepseek-ai/dsh-client-web-react`, a package dsh 0.1.5 dropped; it is now
+ * built on `useSyncExternalStore` in `client/index.ts`.
+ */
+export type SnapshotSelectorHook<S> = <R>(selector: (snapshot: S) => R) => R
 
 /** Injected dependencies of {@link HeadroomPanel}. */
 export interface HeadroomPanelInjected {

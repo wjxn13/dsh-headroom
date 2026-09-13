@@ -6,10 +6,11 @@
  * per request.
  */
 
-import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
-import { bindSnapshotSelector } from '@deepseek-ai/dsh-client-web-react'
-// Type-only: pulls the shell's SlotMap merge (the 'settings.section' entry)
-// and the ctx.settingsScope Context merge.
+import { useCallback, useRef, useSyncExternalStore } from 'react'
+import type { Context as ClientContext } from '@deepseek-ai/cordis'
+// Type-only: pulls the shell's SlotMap merge (the 'settings.section' entry),
+// the ctx.settingsScope Context merge, and the SettingsScope contract.
+import type { SettingsScope, SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
@@ -29,6 +30,35 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 const NS = 'dsh-headroom'
 
 /**
+ * Minimal stand-in for `bindSnapshotSelector`, which shipped in
+ * `@deepseek-ai/dsh-client-web-react` — a package dsh 0.1.5 dropped (it is no
+ * longer a platform seed word nor a materialized module). The underlying
+ * contract is unchanged: `SettingsScope` still exposes `subscribe` /
+ * `getSnapshot`, so a `useSyncExternalStore` wrapper is all that was lost.
+ * The derived value is cached per snapshot so an inline selector does not
+ * produce a fresh reference on every render.
+ * @param scope - the settings namespace scope to bind.
+ * @returns a selector hook reading derived values off the scope snapshot.
+ */
+function makeSnapshotSelector<T>(scope: SettingsScope<T>) {
+  return function useSnapshotSelector<R>(selector: (snapshot: SettingsScopeSnapshot<T>) => R): R {
+    const cacheRef = useRef<{ src: SettingsScopeSnapshot<T> | undefined; out: R }>({
+      src: undefined,
+      out: undefined as unknown as R,
+    })
+    const selRef = useRef(selector)
+    selRef.current = selector
+    const subscribe = useCallback((onChange: () => void) => scope.subscribe(onChange), [scope])
+    const getSnapshot = useCallback(() => {
+      const src = scope.getSnapshot()
+      if (cacheRef.current.src !== src) cacheRef.current = { src, out: selRef.current(src) }
+      return cacheRef.current.out
+    }, [scope])
+    return useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
+  }
+}
+
+/**
  * Required services (cordis fiber inject). The `settings.section` declaration
  * lives in ui-settings-general's SettingsRoot entry; registration waits on it
  * through `slots.inject()`. `settingsScope` supplies the hot-reloaded
@@ -46,7 +76,7 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'dsh-headroom: copy dictionaries')
 
   const scope = ctx.settingsScope.bind<DeepSeekRouteSettings>({ namespace: LLM_DEEPSEEK_NAMESPACE })
-  const useSnapshot = bindSnapshotSelector(scope)
+  const useSnapshot = makeSnapshotSelector(scope)
   const t = ctx.locale.bind(NS) as HeadroomPanelInjected['t']
   // Host command channel: execute('/headroom start') etc. via the commands remote.
   const remote = ctx.get('remote') as { command?: { execute: (agentId: unknown, line: string) => Promise<unknown> } } | undefined
