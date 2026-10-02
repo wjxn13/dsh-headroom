@@ -55,6 +55,8 @@ Headroom 官方宣称可省 60-95% token（JSON 数据）或 15-20%（编码 age
 - **省钱大头是缓存**：Headroom 的核心价值是**不破坏** DeepSeek 的缓存（改写确定性），让 99.9% 输入走折扣价；压缩是锦上添花
 
 > ⚠️ **必须设 `HEADROOM_NO_CCR=1`**：Headroom 的 CCR 会把长内容抽走、换成 `<<ccr:HASH,...>>` 引用（TTL 1800 秒），而 DSH 没有 `headroom_retrieve` 工具去兑换 —— 结果是 **agent 收不到长消息**。注意别错用 `HEADROOM_LOSSLESS=1` 止血：那会让结构化数据（JSON/工具输出）的压缩**归零**（实测 45.3% → 0%）。完整实测与开关对比见 [dsh-headroom-suite README](https://github.com/wjxn13/dsh-headroom-suite#-ccr-折叠与开关选择2026-10-03-实测必读)。
+>
+> 触发路径值得记牢：受保护的只有**用户直接发出的消息**（`router:protected:user_message`）；通过提问面板（`ask_user_question`）回答的内容与工具输出都以 **tool result** 进入，不在保护范围 —— 这才是「收不到长消息」的真正入口。
 
 > 金额换算建议以 DeepSeek 官方账单为准（价格峰谷变动频繁，插件不估算金额，避免误导）。
 
