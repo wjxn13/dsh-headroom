@@ -54,6 +54,8 @@ Headroom 官方宣称可省 60-95% token（JSON 数据）或 15-20%（编码 age
 - **大上下文 coding 会话**（DSH 这类 1M 上下文，实测 2026-08）：**大多数请求只省 ~0.001%**（工具 schema 早已压缩、历史走缓存，可压缩空间被榨干）；但当工具输出/跨轮去重触发时，单次可省 8-20% 甚至更高（实测平均 8.95%，中位 0.1%）。配合 DeepSeek 前缀缓存（99.9% 命中），每次请求的新内容成本极低（~100 token）
 - **省钱大头是缓存**：Headroom 的核心价值是**不破坏** DeepSeek 的缓存（改写确定性），让 99.9% 输入走折扣价；压缩是锦上添花
 
+> ⚠️ **必须设 `HEADROOM_NO_CCR=1`**：Headroom 的 CCR 会把长内容抽走、换成 `<<ccr:HASH,...>>` 引用（TTL 1800 秒），而 DSH 没有 `headroom_retrieve` 工具去兑换 —— 结果是 **agent 收不到长消息**。注意别错用 `HEADROOM_LOSSLESS=1` 止血：那会让结构化数据（JSON/工具输出）的压缩**归零**（实测 45.3% → 0%）。完整实测与开关对比见 [dsh-headroom-suite README](https://github.com/wjxn13/dsh-headroom-suite#-ccr-折叠与开关选择2026-10-03-实测必读)。
+
 > 金额换算建议以 DeepSeek 官方账单为准（价格峰谷变动频繁，插件不估算金额，避免误导）。
 
 ## 与 DSH 自带压缩的分工（为什么不是重复造轮子）
@@ -65,7 +67,7 @@ DeepSeek Harness 自带**会话历史压缩**（`dsh-compaction-basic`：超预�
 | 层 | DSH 自带 | 本插件（Headroom） |
 |---|---|---|
 | 会话历史（摘要旧对话） | ✅ compaction-basic | ❌ 不碰历史（保护缓存前缀） |
-| 工具结果（超预算修剪） | ✅ tool-result-pruner | ❌ 保留原文（CCR 可逆） |
+| 工具结果（超预算修剪） | ✅ tool-result-pruner | ⚠️ 结构化重排（`no_ccr`，语义保留、无 marker） |
 | **请求内（工具 schema / 跨轮冗余）** | ❌ 无 | ✅ **本插件专攻** |
 
 ### 为什么需要这一层

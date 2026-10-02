@@ -180,7 +180,7 @@ export async function startProxy(log: (message: string) => void): Promise<{ ok: 
         ...process.env,
         HEADROOM_DETECT_BACKEND: 'python', // avoid Windows detect_content_type deadlock
         HEADROOM_TOOL_SEARCH: 'off',       // DeepSeek does not know the Anthropic tool_search type
-        HEADROOM_LOSSLESS: '1',            // no-CCR compaction: keep <<ccr:HASH>> markers out of agent context
+        HEADROOM_NO_CCR: '1',              // drop CCR markers/store; every other compressor still runs
       },
     })
     child.unref()
