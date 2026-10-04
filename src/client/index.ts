@@ -1,16 +1,32 @@
 /**
- * dsh-headroom browser half entry: registers the "线路切换" settings section.
- * The section binds the `llm-deepseek` namespace through the settings scope
- * service and writes `baseURL` (or unsets it to revert to the composition
- * default) — the same hot-reloaded field the dsh-llm-deepseek adapter reads
- * per request.
+ * dsh-headroom browser half entry: registers the "\u7ebf\u8def\u5207\u6362" settings section.
+ * The section binds the `llm-deepseek` namespace through the config-forms service
+ * and writes `baseURL` (or unsets it to revert to the composition default) --
+ * the same hot-reloaded field the dsh-llm-deepseek adapter reads per request.
+ *
+ * 2026-10-04 (dsh 0.2.0-rc.2) -- rewritten against the real 0.2.0 surface.
+ *
+ *   0.2.0 REMOVED the per-namespace settings scope:
+ *     - `settingsScope` no longer exists anywhere in the 0.2.0 tree (0 refs)
+ *     - `SettingsScope` / `SettingsScopeSnapshot` types are gone
+ *     - `dsh-client-ui-settings` now provides two services instead:
+ *         `configForms`   -> `ctx.configForms.get(namespace)` returns a
+ *                            `ConfigForm<T>`: getSnapshot / subscribe / set / unset / mutate
+ *         `settingsSchema`-> schema operations
+ *     - `ConfigFormSnapshot<T>` keeps the SAME field names the old
+ *       `SettingsScopeSnapshot<T>` had (status / value / base / user / revision /
+ *       writable / mode), so `HeadroomPanel.tsx` needs no change at all.
+ *
+ *   The one behavioural difference: `ConfigForms.get(entryId)` memoizes per
+ *   namespace and is safe to call repeatedly, so there is no bind/unbind dance
+ *   and no per-plugin lifecycle to own.
  */
 
 import { useCallback, useRef, useSyncExternalStore } from 'react'
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
-// Type-only: pulls the shell's SlotMap merge (the 'settings.section' entry),
-// the ctx.settingsScope Context merge, and the SettingsScope contract.
-import type { SettingsScope, SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
+// Type-only: pulls the shell's SlotMap merge (the 'settings.section' entry) and
+// the ConfigForm / ConfigFormSnapshot contracts.
+import type { ConfigForm, ConfigFormSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
@@ -30,60 +46,64 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 const NS = 'dsh-headroom'
 
 /**
- * Minimal stand-in for `bindSnapshotSelector`, which shipped in
- * `@deepseek-ai/dsh-client-web-react` — a package dsh 0.1.5 dropped (it is no
- * longer a platform seed word nor a materialized module). The underlying
- * contract is unchanged: `SettingsScope` still exposes `subscribe` /
- * `getSnapshot`, so a `useSyncExternalStore` wrapper is all that was lost.
- * The derived value is cached per snapshot so an inline selector does not
- * produce a fresh reference on every render.
- * @param scope - the settings namespace scope to bind.
- * @returns a selector hook reading derived values off the scope snapshot.
+ * Selector hook over a ConfigForm snapshot. Built on `useSyncExternalStore`
+ * rather than a helper import, so an inline selector does not produce a fresh
+ * reference on every render.
+ * @param form - the config form to bind.
+ * @returns a selector hook reading derived values off the form snapshot.
  */
-function makeSnapshotSelector<T>(scope: SettingsScope<T>) {
-  return function useSnapshotSelector<R>(selector: (snapshot: SettingsScopeSnapshot<T>) => R): R {
-    const cacheRef = useRef<{ src: SettingsScopeSnapshot<T> | undefined; out: R }>({
+function makeSnapshotSelector<T>(form: ConfigForm<T>) {
+  return function useSnapshotSelector<R>(selector: (snapshot: ConfigFormSnapshot<T>) => R): R {
+    const cacheRef = useRef<{ src: ConfigFormSnapshot<T> | undefined; out: R }>({
       src: undefined,
       out: undefined as unknown as R,
     })
     const selRef = useRef(selector)
     selRef.current = selector
-    const subscribe = useCallback((onChange: () => void) => scope.subscribe(onChange), [scope])
+    const subscribe = useCallback((onChange: () => void) => form.subscribe(onChange), [form])
     const getSnapshot = useCallback(() => {
-      const src = scope.getSnapshot()
+      const src = form.getSnapshot()
       if (cacheRef.current.src !== src) cacheRef.current = { src, out: selRef.current(src) }
       return cacheRef.current.out
-    }, [scope])
+    }, [form])
     return useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
   }
 }
 
 /**
- * Required services (cordis fiber inject). The `settings.section` declaration
- * lives in ui-settings-general's SettingsRoot entry; registration waits on it
- * through `slots.inject()`. `settingsScope` supplies the hot-reloaded
- * `llm-deepseek` namespace scope; `remote` exposes the host command channel
- * used by the lifecycle buttons; `sessions` resolves the active agent id.
+ * Required services (cordis fiber inject). `configForms` replaces the removed
+ * `settingsScope`; its provider is `dsh-client-ui-settings`, which itself only
+ * injects `['remote','remote.settings']` and therefore registers after this
+ * plugin does -- so, exactly like the old scope, it must NOT be a hard entry in
+ * this array. It is bound through a deferred `ctx.inject` below instead.
+ *
+ * `slots` / `locale` are enough to register the section itself; the section is
+ * registered at the top level so the nav row appears regardless of settings
+ * timing (verified: this is the shape dsh-headroom-manager and dshmarket use).
  */
-export const inject = ['slots', 'locale', 'connection', 'remote', 'settingsScope', 'sessions']
+export const inject = ['slots', 'locale', 'connection', 'remote', 'sessions']
 
 /**
- * Register the Headroom panel once the `settings.section` declaration is on
- * the ledger, binding the `llm-deepseek` namespace scope for the page.
+ * Register the Headroom panel.
  * @param ctx - client root context.
  */
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'dsh-headroom: copy dictionaries')
 
-  const scope = ctx.settingsScope.bind<DeepSeekRouteSettings>({ namespace: LLM_DEEPSEEK_NAMESPACE })
-  const useSnapshot = makeSnapshotSelector(scope)
   const t = ctx.locale.bind(NS) as HeadroomPanelInjected['t']
   // Host command channel: execute('/headroom start') etc. via the commands remote.
   const remote = ctx.get('remote') as { command?: { execute: (agentId: unknown, line: string) => Promise<unknown> } } | undefined
   const sessions = ctx.get('sessions') as { current?: () => { sessionId: string } | undefined } | undefined
+
+  // Held so the panel can be registered before the settings form exists.
+  let form: ConfigForm<DeepSeekRouteSettings> | undefined
+  let useSnapshot: HeadroomPanelInjected['useSnapshot'] = (selector =>
+    selector({ status: 'loading', value: undefined, base: undefined, user: undefined,
+               revision: undefined, writable: false, mode: 'host' })) as HeadroomPanelInjected['useSnapshot']
+
   const injected = (): HeadroomPanelInjected => ({
-    scope,
-    useSnapshot,
+    get scope() { return form },
+    get useSnapshot() { return useSnapshot },
     t,
     runCommand: async (line: string) => {
       // Resolve the current agent session id for the command RPC; fall back to
@@ -105,6 +125,7 @@ export function apply(ctx: ClientContext): void {
     },
   })
 
+  // Top-level registration: the nav row must not depend on settings timing.
   ctx.slots.inject('settings.section', () => ctx.slots.register({
     name: 'settings.section',
     id: 'dsh-headroom',
@@ -112,4 +133,13 @@ export function apply(ctx: ClientContext): void {
     label: () => t('nav'),
     inject: injected,
   }, HeadroomPanel))
+
+  // Bind the real config form once the settings provider has registered.
+  ctx.inject(['configForms'], (scoped) => {
+    const forms = (scoped as unknown as {
+      configForms: { get<T>(entryId: string): ConfigForm<T> }
+    }).configForms
+    form = forms.get<DeepSeekRouteSettings>(LLM_DEEPSEEK_NAMESPACE)
+    useSnapshot = makeSnapshotSelector(form) as HeadroomPanelInjected['useSnapshot']
+  })
 }

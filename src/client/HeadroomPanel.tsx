@@ -15,7 +15,7 @@
 
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import type { SettingsScope, SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
+import type { ConfigForm, ConfigFormSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
 import { DIRECT_BASE_URL, HEADROOM_BASE_URL, HEADROOM_LIVEZ_URL } from '../constants.ts'
 import { EMPTY_STATS, fetchHeadroomStats, formatTokens } from './stats.ts'
 import type { HeadroomStatsView } from './stats.ts'
@@ -38,9 +38,9 @@ export type SnapshotSelectorHook<S> = <R>(selector: (snapshot: S) => R) => R
 /** Injected dependencies of {@link HeadroomPanel}. */
 export interface HeadroomPanelInjected {
   /** Hot-reloaded `llm-deepseek` namespace scope. */
-  scope: SettingsScope<DeepSeekRouteSettings>
+  scope: ConfigForm<DeepSeekRouteSettings>
   /** uSES hook bound to the scope snapshot. */
-  useSnapshot: SnapshotSelectorHook<SettingsScopeSnapshot<DeepSeekRouteSettings>>
+  useSnapshot: SnapshotSelectorHook<ConfigFormSnapshot<DeepSeekRouteSettings>>
   /** Panel copy. */
   t: (key: keyof typeof en) => string
   /** Execute a host command (e.g. '/headroom start') and return its result. */

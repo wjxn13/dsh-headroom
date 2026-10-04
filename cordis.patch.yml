@@ -1,0 +1,9 @@
+# dsh-headroom bundle patch: register the plugin's runtime entries.
+#
+# 2026-10-04 (dsh 0.2.0-rc.2): this file was MISSING — every working plugin
+# ships one, dsh-headroom did not, and its package.json had an empty `dsh.bundle`.
+# Without it the bundle has no runtime entry to mount, so the plugin never
+# activates even though its client module loads into the page.
+- insert:
+    - id: dsh-headroom
+      name: '@dsh-external/dsh-headroom'
