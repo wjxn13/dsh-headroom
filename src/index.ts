@@ -21,6 +21,7 @@ import { homedir } from 'node:os'
 import {
   DEEPSEEK_ANTHROPIC_URL, DEEPSEEK_OPENAI_URL, HEADROOM_BASE_URL, HEADROOM_PORT,
 } from './constants.ts'
+import { mountHeadroomRoutes } from './routes.ts'
 
 export { DEEPSEEK_ANTHROPIC_URL, DEEPSEEK_OPENAI_URL, DIRECT_BASE_URL, HEADROOM_BASE_URL, HEADROOM_LIVEZ_URL, HEADROOM_PORT, LLM_DEEPSEEK_NAMESPACE, PLUGIN_NAME } from './constants.ts'
 
@@ -254,6 +255,23 @@ export const inject = ['commands']
 
 export function apply(ctx: Context): void {
   const log = (message: string): void => { ctx.logger?.info(`[dsh-headroom] ${message}`) }
+
+  // Same-origin data plane for the browser panel (see src/routes.ts). Deferred
+  // inject on purpose — NOT a hard entry in `export const inject`: the
+  // webServer only exists in UI-serving processes, and a hard dependency would
+  // stop the plugin (and its /headroom commands) from ever loading in headless
+  // contexts. Inside the injected scope we are guaranteed the service is live.
+  ctx.inject(['webServer'], (scoped: Context) => {
+    const webServer = (scoped as unknown as {
+      webServer?: import('./routes.ts').HeadroomWebServer
+    }).webServer
+    if (webServer === undefined) {
+      log('webServer absent — /headroom/status not mounted')
+      return
+    }
+    scoped.effect(() => mountHeadroomRoutes(webServer), 'dsh-headroom http routes')
+  })
+
 
   ctx.effect(function* () {
     yield ctx.commands.register({

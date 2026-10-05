@@ -1,7 +1,10 @@
 /**
  * Headroom stats types and fetch helper.
  *
- * The proxy exposes a rich /stats endpoint (no auth, loopback CORS). This
+ * The proxy exposes a rich /stats endpoint. Since 2026-10-05 the panel reads it
+ * through the plugin's same-origin host route `/headroom/status` — the proxy's
+ * loopback CORS does not accept the desktop client's `dsh-app://app` origin,
+ * so direct browser fetches silently fail there. This
  * module extracts the lifetime + display-session token numbers the panel
  * renders. Money display was removed: Headroom's hit_rate is request-level
  * (not token-level) and its token split does not match DeepSeek billing, so
@@ -71,22 +74,27 @@ export const EMPTY_STATS: HeadroomStatsView = {
 }
 
 /**
- * Fetch Headroom /stats and project the panel numbers. A failure returns the
- * empty view with ok=false so the UI can degrade gracefully.
- * @param base - Headroom origin (defaults to the loopback proxy).
+ * Fetch the panel numbers through the plugin's same-origin host route
+ * `/headroom/status` (see src/routes.ts). The desktop client's origin is the
+ * custom protocol `dsh-app://app` and the proxy's loopback CORS rejects it, so
+ * the browser must not fetch http://127.0.0.1:8787/stats directly — the host
+ * does the proxy round trip and embeds the raw /stats body in `stats`.
+ * A failure returns the empty view with ok=false so the UI can degrade
+ * gracefully.
  * @returns the projected stats view.
  */
-export async function fetchHeadroomStats(base = 'http://127.0.0.1:8787'): Promise<HeadroomStatsView> {
+export async function fetchHeadroomStats(): Promise<HeadroomStatsView> {
   try {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), 4000)
     try {
-      const response = await fetch(`${base}/stats`, { signal: controller.signal })
+      const response = await fetch('/headroom/status', { signal: controller.signal })
       if (!response.ok) return EMPTY_STATS
-      const body = (await response.json()) as HeadroomStatsResponse
-      const lifetime = body.persistent_savings?.lifetime
-      const session = body.persistent_savings?.display_session
-      const cache = body.prefix_cache?.totals
+      const body = (await response.json()) as { running?: boolean; stats?: HeadroomStatsResponse | null }
+      if (body.running !== true || body.stats === null || body.stats === undefined) return EMPTY_STATS
+      const lifetime = body.stats.persistent_savings?.lifetime
+      const session = body.stats.persistent_savings?.display_session
+      const cache = body.stats.prefix_cache?.totals
       return {
         // display_session is Headroom's rolling 60-minute activity window.
         inputTokens: session?.total_input_tokens ?? lifetime?.total_input_tokens ?? 0,

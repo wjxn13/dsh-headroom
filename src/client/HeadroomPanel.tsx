@@ -16,7 +16,7 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { ConfigForm, ConfigFormSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
-import { DIRECT_BASE_URL, HEADROOM_BASE_URL, HEADROOM_LIVEZ_URL } from '../constants.ts'
+import { DIRECT_BASE_URL, HEADROOM_BASE_URL } from '../constants.ts'
 import { EMPTY_STATS, fetchHeadroomStats, formatTokens } from './stats.ts'
 import type { HeadroomStatsView } from './stats.ts'
 import type { en } from './locales.ts'
@@ -65,9 +65,11 @@ function routeOf(baseURL: string | undefined): 'direct' | 'headroom' | 'unknown'
 }
 
 /**
- * Probe Headroom `/livez` once. The proxy answers the loopback origin's CORS
- * preflight, so a plain fetch is sufficient; a timeout or network failure
- * means the route is down.
+ * Probe Headroom health through the plugin's same-origin host route. The
+ * desktop client's origin is the custom protocol `dsh-app://app`, which the
+ * proxy's loopback CORS does not accept, so the panel must NOT fetch
+ * http://127.0.0.1:8787 directly (it silently fails there); the host does the
+ * proxy round trip and answers on /headroom/status (see src/routes.ts).
  * @returns the probe outcome.
  */
 async function probeHeadroom(): Promise<Exclude<ProbeState, { kind: 'idle' | 'probing' }>> {
@@ -75,9 +77,10 @@ async function probeHeadroom(): Promise<Exclude<ProbeState, { kind: 'idle' | 'pr
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), 3000)
     try {
-      const response = await fetch(HEADROOM_LIVEZ_URL, { signal: controller.signal })
+      const response = await fetch('/headroom/status', { signal: controller.signal })
       if (!response.ok) return { kind: 'down' }
-      const body = (await response.json()) as { version?: string }
+      const body = (await response.json()) as { running?: boolean; version?: string }
+      if (body.running !== true) return { kind: 'down' }
       return { kind: 'healthy', version: typeof body.version === 'string' ? body.version : '?' }
     } finally {
       clearTimeout(timer)
